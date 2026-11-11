@@ -8,7 +8,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "start": "node --env-file-if-exists=.env dist/index.js",
     "smoke": "node test/smoke/deployed-smoke.ts",
-    "eval": "node --env-file-if-exists=.env dist/eval/run.js"
+    "eval": "node --env-file-if-exists=.env dist/eval/run.js",
+    "report": "node scripts/report.ts"
   },
   "dependencies": {
     "@device-repair/shared": "*",
