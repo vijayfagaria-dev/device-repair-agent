@@ -27,8 +27,23 @@ export interface TranscriptMessage {
   id?: string;
 }
 
-export type CallServerMessage = AudioMessage | StopPlaybackMessage | TranscriptMessage;
+/**
+ * Sent right before the server closes a socket with `code` (protocol.md v1.7). Some proxies (Render's) replace custom
+ * 4xxx close codes with 1000/1005/1006, so the code and reason also travel in a message. Same shape on /call and /chat.
+ */
+export interface CallClosingMessage {
+  type: CallServerMessageType.CLOSING;
+  code: number;
+  reason: string;
+}
 
+export interface ChatClosingMessage {
+  type: ChatServerMessageType.CLOSING;
+  code: number;
+  reason: string;
+}
+
+export type CallServerMessage = AudioMessage | StopPlaybackMessage | TranscriptMessage | CallClosingMessage;
 export interface ChatMessage {
   type: ChatServerMessageType.MESSAGE;
   role: Role;
@@ -119,7 +134,8 @@ export type ChatServerMessage =
   | RecordMessage
   | ChatTranscriptMessage
   | SessionStateMessage
-  | SyncDoneMessage;
+  | SyncDoneMessage
+  | ChatClosingMessage;
 
 export type InputValue = string | number | boolean | string[] | null;
 

@@ -7,6 +7,8 @@ export enum CallServerMessageType {
   AUDIO = "audio",
   STOP_PLAYBACK = "stopPlayback",
   TRANSCRIPT = "transcript",
+  /** Sent just before the server closes the socket with a code (protocol.md v1.7). */
+  CLOSING = "closing",
 }
 
 export enum ChatServerMessageType {
@@ -20,6 +22,8 @@ export enum ChatServerMessageType {
   TRANSCRIPT = "transcript",
   SESSION_STATE = "sessionState",
   SYNC_DONE = "syncDone",
+  /** Sent just before the server closes the socket with a code (protocol.md v1.7). */
+  CLOSING = "closing",
 }
 
 export enum ChatClientMessageType {

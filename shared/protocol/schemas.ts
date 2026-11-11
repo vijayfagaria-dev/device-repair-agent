@@ -120,6 +120,12 @@ export const ChatSyncDoneSchema = z.strictObject({
   lastSeq: z.number().int().min(0),
 });
 
+export const ChatClosingSchema = z.strictObject({
+  type: z.literal(ChatServerMessageType.CLOSING),
+  code: z.number().int().min(1000).max(4999),
+  reason: z.string().max(123),
+});
+
 export const ChatServerMessageSchema = z.discriminatedUnion("type", [
   ChatMessageSchema,
   ChatInputRequestSchema,
@@ -129,4 +135,5 @@ export const ChatServerMessageSchema = z.discriminatedUnion("type", [
   ChatTranscriptSchema,
   ChatSessionStateSchema,
   ChatSyncDoneSchema,
+  ChatClosingSchema,
 ]);

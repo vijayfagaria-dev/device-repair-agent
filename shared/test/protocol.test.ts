@@ -24,7 +24,7 @@ describe("starter wire contract", () => {
   });
 
   it("keeps the message type strings", () => {
-    expect(Object.values(CallServerMessageType)).toEqual(["audio", "stopPlayback", "transcript"]);
+    expect(Object.values(CallServerMessageType)).toEqual(["audio", "stopPlayback", "transcript", "closing"]);
     // The starter's values, unchanged and first; protocol.md §3.3/§3.4 (P3-T04) adds the rest (additive).
     expect(Object.values(ChatServerMessageType)).toEqual([
       "message",
@@ -35,6 +35,7 @@ describe("starter wire contract", () => {
       "transcript",
       "sessionState",
       "syncDone",
+      "closing",
     ]);
     expect(Object.values(ChatClientMessageType)).toEqual(["inputResponse", "optOut", "clientMetric"]);
   });
