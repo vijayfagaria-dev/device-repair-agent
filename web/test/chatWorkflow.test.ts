@@ -96,7 +96,7 @@ describe("close codes and links (P4-T06)", () => {
   it("each refusal on /call reads as a sentence; an ordinary end has none", () => {
     expect(callCloseMessage(4429)).toBe("Voice is busy right now. You can continue here in chat.");
     expect(callCloseMessage(4403)).toBe("This page isn't allowed to connect to the voice server.");
-    expect(callCloseMessage(4409)).toBe("A call is already active in another tab.");
+    expect(callCloseMessage(4409)).toBe("A call is already running for this claim (another tab, or this one). Hang up first to start a new one.");
     expect(callCloseMessage(4410)).toMatch(/^This claim is closed/);
     expect(callCloseMessage(4411)).toMatch(/resume/);
     expect(callCloseMessage(1000)).toBeNull();

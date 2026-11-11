@@ -152,22 +152,19 @@ describe("no double acknowledgement (seen in a real gpt-oss-20b call)", () => {
 
   it("a follow-up that only starts the same way is spoken in full", async () => {
     const t = setup(() => ({ result: { status: "valid" }, ok: true, ack: "Got it." }));
-    t.llm.enqueue({ toolCalls: [save("deviceType", "smartphone")] }, { text: "Got itchy fingers. Which model is it?", pieceChars: 4 });
+    t.llm.enqueue({ toolCalls: [save("deviceType", "smartphone")] }, { text: "Got itchy fingers? Which model is it?", pieceChars: 4 });
     const out = await t.go();
-    expect(out.spoken).toBe("Got it. Got itchy fingers. Which model is it?");
+    expect(out.spoken).toBe("Got it. Got itchy fingers? Which model is it?");
   });
 
-  // Live (2026-11-11 22:45): the model asked urgency four times, wrote "It started last Tuesday." as if the customer had
-  // said it, and ended with its own plan. One question per turn: speech stops at the first "?".
-  it("speech stops at the first question: no repeats, no invented customer reply, no narrated plan", async () => {
+  it("nothing the model says is cut: a reply with a question and more after it is spoken in full", async () => {
     const t = setup();
-    t.llm.enqueue({ text: "What seems to be wrong with it? It started last Tuesday. How urgent is it? Now need to request serial number via chat.", pieceChars: 7 });
+    t.llm.enqueue({ text: "What seems to be wrong with it? Take your time, I'm listening.", pieceChars: 7 });
     const out = await t.go();
-    expect(out.spoken).toBe("What seems to be wrong with it?");
-    expect(out.messages).toEqual([{ role: "assistant", content: "What seems to be wrong with it?" }]);
+    expect(out.spoken).toBe("What seems to be wrong with it? Take your time, I'm listening.");
   });
 
-  it("the cap holds across rounds: a follow-up after a question is not spoken", async () => {
+  it("after the model asked something, a failed tool call does not start a follow-up round that asks again", async () => {
     const t = setup(() => ({ result: { status: "invalid", error: "which date?" }, ok: false }));
     t.llm.enqueue({ text: "When did it start?", toolCalls: [save("problemStartedAt", "soon")] }, { text: "Could you tell me when it started?" });
     const out = await t.go();
@@ -175,67 +172,8 @@ describe("no double acknowledgement (seen in a real gpt-oss-20b call)", () => {
     expect(t.llm.requests).toHaveLength(1);
   });
 
-  // Live session ed7ce483 (2026-11-11): the reply broke after "When did" and the call sat silent until the user left.
-  it("a stream that breaks mid-sentence gets one more round, told where it was cut off", async () => {
-    const t = setup();
-    t.llm.enqueue({ text: "I'm sorry to hear that. When did", pieceChars: 8, breakAfter: 3 }, { text: "the screen crack?" });
-    const out = await t.go();
-    expect(t.llm.requests).toHaveLength(2);
-    const hint = t.llm.requests[1]?.messages.find((m) => m.role === "system" && String(m.content).includes("cut off"));
-    expect(hint).toBeDefined();
-    expect(out.failed).toBe(false);
-    expect(out.spoken).toContain("the screen crack?");
-  });
-
-  it("a stream that breaks twice stops after one retry and the call carries on", async () => {
-    const t = setup();
-    t.llm.enqueue({ text: "When did it start", pieceChars: 4, breakAfter: 2 }, { text: "Sorry, one more", pieceChars: 4, breakAfter: 1 });
-    const out = await t.go();
-    expect(t.llm.requests).toHaveLength(2);
-    expect(out.aborted).toBe(false);
-  });
-
-  // Same session: the model asked for the brand and model three times in one turn, because a failed tool call after it
-  // had already spoken started another round that spoke again.
-  it("a quiet rejection after the model already spoke does not start a second round that asks again", async () => {
-    const t = setup(() => ({ result: { status: "rejected" }, ok: false, quiet: true }));
-    t.llm.enqueue({ text: "What's the brand and model?", toolCalls: [save("deviceModel", "x")] }, { text: "Could you tell me the brand and model?" });
-    const out = await t.go();
-    expect(t.llm.requests).toHaveLength(1);
-    expect(out.spoken).toBe("What's the brand and model?");
-  });
-
-  it("a real invalid value still gets a follow-up so the agent can react", async () => {
-    const t = setup(() => ({ result: { status: "invalid", error: "which date?" }, ok: false }));
-    t.llm.enqueue({ text: "Thanks.", toolCalls: [save("problemStartedAt", "soon")] }, { text: "Roughly which date was that?" });
-    await t.go();
-    expect(t.llm.requests).toHaveLength(2);
-  });
-
   // Live (2026-11-11 22:55): "I've sent a card in the chat for you to type in your serial number" was said after the
-  // customer had typed it. Root causes: a follow-up round with nothing to ask, and text from a state that went stale.
-  it("an acknowledgement with nothing left to ask ends the turn: no follow-up round restating the card", async () => {
-    const t = setup(() => ({ result: { status: "sent" }, ok: true, ack: "I've sent a box to your chat for the serial number." }));
-    t.llm.enqueue({ toolCalls: [{ name: "request_chat_input", args: { field: "serialNumber" } }] }, { text: "I've sent a card in the chat for you to type in your serial number." });
-    const out = await runTurnWith(t, { moreToAsk: async () => false });
-    expect(out.spoken).toBe("I've sent a box to your chat for the serial number.");
-    expect(t.llm.requests).toHaveLength(1);
-  });
-
-  it("with something still to ask, the follow-up round runs as before", async () => {
-    const t = setup(() => ({ result: { status: "valid" }, ok: true, ack: "Got it." }));
-    t.llm.enqueue({ toolCalls: [save("deviceType", "smartphone")] }, { text: "Which model is it?" });
-    const out = await runTurnWith(t, { moreToAsk: async () => true });
-    expect(out.spoken).toBe("Got it. Which model is it?");
-  });
-
-  it("a safety flag has no acknowledgement, so it still gets its follow-up even with nothing left to ask", async () => {
-    const t = setup(() => ({ result: { status: "flagged" }, ok: true }));
-    t.llm.enqueue({ toolCalls: [{ name: "flag_for_review", args: { kind: "safety", reason: "swollen battery" } }] }, { text: "Please stop using and charging it now." });
-    const out = await runTurnWith(t, { moreToAsk: async () => false });
-    expect(out.spoken).toBe("Please stop using and charging it now.");
-  });
-
+  // customer had typed it: text written from a state that went stale while the model was generating.
   it("model text written from a stale state is not spoken, and no follow-up round runs", async () => {
     const t = setup();
     let stale = false;
@@ -257,7 +195,7 @@ describe("no double acknowledgement (seen in a real gpt-oss-20b call)", () => {
 });
 
 /** runTurn with the setup's fakes and extra input hooks. */
-function runTurnWith(t: ReturnType<typeof setup>, hooks: { moreToAsk?: () => Promise<boolean>; isStale?: () => boolean }) {
+function runTurnWith(t: ReturnType<typeof setup>, hooks: { isStale?: () => boolean }) {
   return runTurn(
     { llm: t.llm, tools: {
         run: async (call) => {

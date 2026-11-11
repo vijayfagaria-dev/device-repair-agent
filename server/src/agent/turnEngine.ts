@@ -47,13 +47,6 @@ export interface TurnInput {
   state: () => Promise<LlmMessage>;
   signal?: AbortSignal;
   /**
-   * Whether anything the model could still ask the customer by voice is left (a voice field not yet collected). When
-   * an acknowledgement was just spoken and nothing is left, the turn ends there instead of running a follow-up round
-   * that would only restate what the system already announced (a card is open; the answer comes in the chat).
-   * Default: something is left.
-   */
-  moreToAsk?: () => Promise<boolean>;
-  /**
    * True once a chat event arrived that this turn's state does not contain. The model's text was written from an older
    * state and would be stale when spoken (it asks for what the customer has just typed): it is dropped, and the event
    * gets its own turn with fresh state (call engine: pending notes → proactive turn). Acknowledgements the system built
@@ -105,8 +98,8 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
   let justSaid = "";
   /** A stream that broke mid-way gets one more round, told where it was cut off (a dead line is worse than a retry). */
   let retriedBreak = false;
-  /** One question per turn: after the first "?" nothing more is spoken (live: the model asked urgency four times, then
-   *  wrote the customer's next answer and its own plan into the reply). */
+  /** The model has asked the customer something this turn: no follow-up round runs to ask again (live: the same question
+   *  was asked three times, because failed tool calls after it started more rounds). Nothing is cut from what it says. */
   let asked = false;
   let hint: LlmMessage | null = null;
 
@@ -158,12 +151,9 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
     // Prompt markup, invisible characters and runaway filler never reach the speaker (speechFilter.ts).
     const filter = new SpeechFilter();
     const emit = (raw: string) => speak(filter.push(raw));
-    const speak = (raw: string) => {
-      if (asked || !raw || input.isStale?.()) return;
-      const q = raw.indexOf("?");
-      const delta = q === -1 ? raw : raw.slice(0, q + 1);
-      if (q !== -1) asked = true;
-      if (!delta) return;
+    const speak = (delta: string) => {
+      if (!delta || input.isStale?.()) return;
+      if (delta.includes("?")) asked = true;
       // Only the round's first piece is separated from earlier speech; later pieces are mid-word tokens.
       if (text === "") say(delta.replace(/^\s+/, ""));
       else {
@@ -267,12 +257,9 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
       out.endCall = true;
       break;
     }
-    // A follow-up round exists to ask the next question or to react to an invalid value. It does not run when a question
-    // was asked, when the turn's state went stale, or when an acknowledgement was spoken and there is nothing left to ask.
-    const reactToInvalid = outcomes.some((o) => !o.ok && !o.quiet);
-    const spokeAck = !text.trim() && content !== null;
-    const nothingToAsk = spokeAck && !reactToInvalid && input.moreToAsk ? !(await input.moreToAsk()) : false;
-    const needFollowUp = !asked && !(input.isStale?.() ?? false) && !nothingToAsk && (!text.trim() || reactToInvalid);
+    // A follow-up round exists to ask the next question or to react to an invalid value. It does not run after the model
+    // already asked something, or once the turn's state went stale (the chat event gets its own turn).
+    const needFollowUp = !asked && !(input.isStale?.() ?? false) && (!text.trim() || outcomes.some((o) => !o.ok && !o.quiet));
     if (!needFollowUp) break;
   }
   return out;

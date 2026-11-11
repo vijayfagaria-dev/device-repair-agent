@@ -293,8 +293,7 @@ describe("barge-in (P5-T07)", () => {
   });
 
   it("echo or a cough doesn't interrupt: voice activity alone, or one short word", async () => {
-    const statement = long.replace("?", "."); // one question per turn: a long reply is statements, not several questions
-    const c = await call({ greeting: { text: `${statement} ${statement}` } }); // long enough to still be speaking throughout
+    const c = await call({ greeting: { text: `${long} ${long}` } }); // long enough to still be speaking throughout
     await c.step(600);
     c.stt.current.emit({ type: "speechStarted" });
     await c.step(1_000);

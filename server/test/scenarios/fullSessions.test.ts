@@ -65,10 +65,8 @@ async function voiceCallWithFields(run: Run, extraFirstTurn: Parameters<typeof s
     // What the customer says includes every extra value's evidence: the model may only save what was said.
     [FIVE_VOICE_WORDS, ...extraFirstTurn.map((args) => args[2])].join(" "),
     { toolCalls: [...(FIVE_VOICE_FIELDS.toolCalls ?? []), ...extraFirstTurn.map((args) => save(...args))] },
-    // The card announcement is the system's ("I've sent a box to your chat..."); with every voice field collected and a
-    // card open there is no follow-up round, so the model has no text to write here (user report, 2026-11-11 22:55).
-    // A spoken identifier opens its own card in the same turn, so there is no round left for this one.
-    ...(extraFirstTurn.length === 0 ? [{ toolCalls: [{ name: "request_chat_input", args: { field: "serialNumber" } }] }] : []),
+    { toolCalls: [{ name: "request_chat_input", args: { field: "serialNumber" } }] },
+    { text: "I've sent a box to the chat for your serial number. Please type it in there." },
   );
   return call;
 }

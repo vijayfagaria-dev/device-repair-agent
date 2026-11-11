@@ -81,6 +81,10 @@ export async function callSocketRoutes(app: FastifyInstance, deps: CallSocketDep
   const active = new ActiveCalls();
   // Calls being set up count against the cap too (two connects at once can't both slip under it).
   let starting = 0;
+  // Sessions with a call running or being set up. A second connect for the same session is refused as "already
+  // active" before the capacity check: with a cap of 1 the caller's own live call would otherwise make the refusal
+  // read "voice is busy" (live report, 2026-11-11), which is untrue and hides that the call is still running.
+  const sessionsInCall = new Set<string>();
   const callDeps: SocketDeps = { ...deps, keepAlive: deps.voice?.keepAlive ?? CALL_KEEPALIVE };
 
   app.route({
@@ -109,12 +113,19 @@ export async function callSocketRoutes(app: FastifyInstance, deps: CallSocketDep
         return;
       }
       if (socket.readyState !== socket.OPEN) return;
+      if (sessionsInCall.has(session.id)) {
+        log.warn("call refused: this session already has a call");
+        closeWithNotice(socket, CloseCode.CALL_ALREADY_ACTIVE, "call already active");
+        return;
+      }
       if (active.size + starting >= voice.maxConcurrentCalls) {
         log.warn({ active: active.size, max: voice.maxConcurrentCalls }, "call refused: capacity");
         closeWithNotice(socket, CloseCode.RATE_LIMITED, "capacity");
         return;
       }
       starting += 1;
+      sessionsInCall.add(session.id);
+      let started = false;
       const callId = `c${randomBytes(9).toString("base64url").replace(/_/g, "-")}`;
       let engine: CallEngine;
       // The socket can close at any point, also while the providers are still opening: keep its close code, so the
@@ -159,6 +170,7 @@ export async function callSocketRoutes(app: FastifyInstance, deps: CallSocketDep
             if (socket.readyState === socket.OPEN || socket.readyState === socket.CONNECTING) closeWithNotice(socket, code, reason);
           },
         });
+        started = true;
       } catch (err) {
         // The engine closes the socket itself when a provider fails; anything else (StartCall's database) is 1011.
         log.error({ code: (err as { code?: string }).code, message: (err as Error).message }, "call failed to start");
@@ -168,10 +180,14 @@ export async function callSocketRoutes(app: FastifyInstance, deps: CallSocketDep
         return;
       } finally {
         starting -= 1;
+        if (!started) sessionsInCall.delete(session.id);
       }
 
       active.engines.add(engine);
-      void engine.whenEnded.then(() => active.engines.delete(engine));
+      void engine.whenEnded.then(() => {
+        active.engines.delete(engine);
+        sessionsInCall.delete(session.id);
+      });
       const stop = (code: number) => void engine.stop(endReasonFor(code)).finally(() => active.engines.delete(engine));
       if (closeCode !== null) {
         stop(closeCode);

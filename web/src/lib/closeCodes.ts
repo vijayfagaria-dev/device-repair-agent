@@ -9,7 +9,7 @@ export function callCloseMessage(code: number): string | null {
     case 4403:
       return "This page isn't allowed to connect to the voice server.";
     case 4409:
-      return "A call is already active in another tab.";
+      return "A call is already running for this claim (another tab, or this one). Hang up first to start a new one.";
     case 4410:
       return "This claim is closed. Open the page without a session link to start a new one.";
     case 4411:

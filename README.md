@@ -84,15 +84,15 @@ gpt-oss-20b mostly answers with tool calls and no speech, so code speaks a templ
 
 ### Keeping the model honest
 
-Real calls showed what a small free-tier model does when left to write speech and call tools in one free-form generation: it saves values nobody said, plays the customer's part, repeats itself, and reads its own markup aloud. Prompt rules alone did not stop that, so the behaviour is enforced in code, and each rule below exists because a recorded session broke it:
+Riya's voice is the model's own: she greets the customer warmly, introduces herself by name, acknowledges what she hears and phrases her questions in her own words. The code does not script her. It guards the places where a small free-tier model, left to write speech and call tools in one generation, did real damage in recorded sessions: it saved values nobody said, read its own markup aloud, asked the same question again after a failed tool call, and spoke after the customer had already acted. Each guard exists because a recorded session broke it:
 
 - **Saved values must be grounded.** `save_field` carries the customer's exact words as evidence; the server only accepts it when those words appear in the customer's last few utterances. A made-up urgency, a description nobody gave, or markup copied from the state message is rejected quietly, and the model is told to ask instead.
-- **One question per turn.** Speech stops at the first question mark, and no follow-up round runs after a question. This ends the repeated questions and the model answering for the customer.
+- **No second round after the model has asked something.** The engine used to call the model again after a failed tool call, which made it ask the same question up to three times in one turn. Once the model has asked, that turn is over; nothing it says is cut.
 - **Speech is cleaned before it is spoken or stored.** Markup and markdown (`**Yes**` would be read as "star star yes"), zero-width characters, runaway filler and internal names such as `deviceModel` or `pendingChatCards` are removed or turned into plain words, and glued sentences are separated. A reply that degenerates into filler is cut off.
-- **A follow-up round only runs when there is something to ask.** If every voice field is collected and a card is already open, the system's own announcement is the whole reply; the model is not called again to restate it.
 - **Stale text is dropped.** If a chat event arrives while the model is writing, text drafted from the older state is not spoken (it would ask for what the customer has just typed); the event gets its own turn with fresh state.
 - **A broken stream is retried once**, told where it was cut off, so a dropped connection does not leave the line silent mid-sentence.
 - **Speech recognition is primed** with the repair vocabulary (device types, brands, damage words) through Deepgram keyterms, which helps with mishearings such as "Riya" becoming "Reuters".
+- **One call per claim.** A second call attempt for a claim whose call is still running is told so ("a call is already running for this claim") instead of being reported as the voice line being busy.
 
 Most of these have regression tests built from the transcripts of the failing sessions.
 
@@ -267,7 +267,7 @@ Each of these has an automated test; the scenario tests drive a real server thro
 
 ### What I trust least
 
-1. **The model's choices on a real call.** Tool handling, grounding, the speech filter and the turn rules are covered by tests built from real failing sessions, but the model itself is a free-tier 20B model: whether it asks for cards at good moments and how it phrases things are only checked by hand. The one-question rule also trades expressiveness for predictability, and could cut a reply that legitimately had two parts.
+1. **The model's choices on a real call.** Tool handling, grounding, the speech filter and the turn rules are covered by tests built from real failing sessions, but the model itself is a free-tier 20B model: whether it asks for cards at good moments and how it phrases things are only checked by hand. Because Riya's wording is the model's own, she can still repeat herself or phrase something oddly; the guards limit the damage, not the style.
 2. **Barge-in latency from the reviewer's network.** The stop-after-speech-onset budget (1.0 s) measured 1.40–1.48 s from India in the spike, because Deepgram detects words late from there. It may miss on the deployed check.
 3. **The free tiers themselves.** Their limits are not guaranteed, and an outage or a spent quota degrades the call to chat-only (by design, but a worse demo).
 4. **The browser latency probe.** Its thresholds are untested guesses, and the number is noisy with speakers.
@@ -279,7 +279,6 @@ With another week:
 
 - Build the missing **identifier-conflict card** and let a typed edit change a narrative field.
 - Run the deployed checks for real (the E2E script twice, a restart under a live call, two phones) and tune barge-in and endpointing against the measured numbers.
-- Move to **fixed question wording** for the common path, with the model used for extraction and exceptions only, to remove the remaining model-written speech.
 - A call **auto-redial** after a drop, and **Hindi** plus one more Indian language (needs an STT/TTS pairing with Indian voices).
 - **Vision check** of the invoice and photos (review rule R-4 is reserved for it).
 - A `/debug/:sessionId` timeline page on top of `GET /api/sessions/:id/timeline`.
@@ -402,5 +401,5 @@ Claude Code (Anthropic) wrote most of the code and tests under my direction, and
 - A first network-latency script reported a figure that was off by about 5x (a proxy and an IPv6 fallback) and was nearly used in a decision; it was caught as implausible and the script fixed.
 - It assumed what Gemini's `-latest` alias points to and that Groq has a cached-token rate; both are now stated as assumptions next to the prices.
 - A scenario test for the identifier-conflict card could not pass because nothing implements that card; the plan had listed the scenario without a task to build it.
-- It wrote prompt rules ("one question at a time", "no markdown", "never invent a value") that the deployed model then ignored. Recorded live sessions showed repeated questions, invented customer replies and a voice reading "star star yes", so those rules are now enforced in code (see [Keeping the model honest](#keeping-the-model-honest)).
+- It wrote prompt rules ("no markdown", "never invent a value") that the deployed model then ignored, and recorded live sessions showed invented values, repeated questions and a voice reading "star star yes". It also over-corrected once: it cut Riya's replies at the first question mark and replaced her card announcements with fixed lines, which made her sound scripted, and that was reverted in favour of fixing the causes (see [Keeping the model honest](#keeping-the-model-honest)).
 - A transcript that was correct in order but showed each reply long before the voice reached it passed every automated test; only a live call exposed it, and the transcript now follows playback.

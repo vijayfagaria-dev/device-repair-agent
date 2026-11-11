@@ -95,6 +95,36 @@ describe("starting a call", () => {
     await waitFor(async () => (await ended(id)).length === 1, "call.ended");
   });
 
+  // Live report (2026-11-11): pressing Call while the same claim's call was still running said "Voice is busy right now",
+  // because the capacity check (cap 1) ran before the per-session check.
+  it("with a cap of 1, a second call from the same session is told a call is already active, not that voice is busy; the slot is free afterwards", async () => {
+    fresh();
+    const capped = await startApp(db, { services, voice: { ...voice, maxConcurrentCalls: 1 } });
+    try {
+      const id = await seedSession(db.pool);
+      const first = await openCall(id, capped);
+      await waitFor(async () => (await getSession(db.pool, id))?.activeCallId !== null, "the first call");
+      const second = await openCall(id, capped);
+      expect(await second.closed).toEqual({ code: 4409, reason: "call already active" });
+      expect(first.ws.readyState).toBe(first.ws.OPEN);
+      // Another session is still refused for capacity: the cap itself is unchanged.
+      const other = await openCall(await seedSession(db.pool), capped);
+      expect(await other.closed).toEqual({ code: 4429, reason: "capacity" });
+      first.ws.close(1000);
+      await first.closed;
+      await waitFor(async () => (await ended(id)).length === 1, "call.ended");
+      // The session's slot and the instance's slot are both free again.
+      fresh();
+      const again = await openCall(id, capped);
+      await waitFor(async () => (await getSession(db.pool, id))?.activeCallId !== null, "the call to start again");
+      expect(again.ws.readyState).toBe(again.ws.OPEN);
+      again.ws.close(1000);
+      await again.closed;
+    } finally {
+      await capped.close();
+    }
+  });
+
   it("P7-T05: calling on an opted-out session is refused with 4411 and the chat gets \"Resume your claim?\"; calling on a completed one reopens it", async () => {
     fresh();
     const optedOut = await seedSession(db.pool);
