@@ -21,3 +21,13 @@ data/
 *.db-shm
 test-results/
 playwright-report/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
