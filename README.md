@@ -6,7 +6,7 @@ A user reports a faulty device. The conversation starts on a **web voice call**;
 
 | | |
 |---|---|
-| **Public URL** | **https://device-repair-agent.onrender.com/** (Render free web service, Virginia). It sleeps after 15 minutes without traffic, so the first request after a quiet period can take about a minute. |
+| **Public URL** | **https://device-repair-agent.onrender.com/** (Render free web service, Virginia). **It runs on a free instance that sleeps after 15 minutes without traffic, so the first request after a quiet period can take about a minute to wake it** (the page keeps retrying and loads once it is up; no data is lost, everything is in Postgres). Nothing keeps it awake on purpose: an always-on pinger would use up the free instance hours. If it looks stuck, wait a minute and reload, or open `/healthz` first to wake it. |
 | **Try it** | Open the URL, tap **Call**, allow the microphone, and say what is wrong with a device. Cards appear in the thread as the agent asks for them. Use made-up data only (see *Security*). |
 | **Starter UI demo** | `/?demo=1` runs the scripted demo with no backend. |
 
@@ -162,6 +162,7 @@ Server-side cascaded pipeline: it gives full control of interruption and transcr
 - **English only.** The date resolver has no festival names ("around Diwali" is re-asked) and no "last year". Aura-2 has no Indian-accent voice.
 - **An opted-out user** is offered "Resume your claim?" only when they try to call again; chat has no other control for it.
 - **A silent session with no activity at all** never finalizes (only the no-call timer runs).
+- **Cold start:** the free Render instance sleeps when idle (about a minute to wake), and the first call after a long quiet period can start slowly. There is deliberately no keep-alive monitor.
 - **Single instance:** the rate limiter, the call cap and the quota override live in process memory. Two instances during a deploy overlap stay consistent for session data (row locks, `SKIP LOCKED`), but not for these limits.
 - **Free-tier ceilings:** the Groq limit (8,000 tokens a minute per model) caps concurrent calls at 1 by default; Neon's 1 GB and 100 compute-hours bound the data and the always-on time.
 - **The call's live state does not survive a restart:** the call ends and the user taps Call again (a new call resumes from state; no automatic redial).
@@ -169,11 +170,11 @@ Server-side cascaded pipeline: it gives full control of interruption and transcr
 
 ## What I trust least
 
-1. **The model's choices on a real call.** The server's handling of tool calls is tested with scripted models, and the pipeline was measured in a spike, but the deployed agent has not yet been exercised end to end with real providers; whether it requests chat cards at good moments, and whether the acknowledgement regexes in the deployed check match what it really says, are unproven. This is the least verified part.
+1. **The model's choices on a real call.** The server's handling of tool calls is tested with scripted models, and I have run full sessions by hand on the deployed site with the real providers, but the agent's behaviour is not covered by automated tests: whether it asks for chat cards at good moments, and whether the deployed check's acknowledgement patterns match what it really says, are only checked by hand. This is the least tested part.
 2. **Barge-in latency from the reviewer's network.** The stop-after-speech-onset budget (1.0 s) was measured at 1.40–1.48 s from India in the spike, because Deepgram detects words late from there. It may fail on the deployed check.
 3. **The free tiers themselves.** Their limits are not guaranteed, and a provider outage or quota end degrades the call to chat-only (by design, but a worse demo).
 4. **The browser latency probe.** Its thresholds are untested guesses; the number is secondary and noisy with speakers.
-5. **Anything that runs only on Render:** proxy headers (client IP), the sleep/wake cycle of the free instance and the restart check have not been exercised against a real deployment.
+5. **The free Render instance:** it sleeps when idle, and its restart behaviour and proxy headers (client IP) rely on Render's free-tier terms, which can change.
 
 ## Cost and latency
 
