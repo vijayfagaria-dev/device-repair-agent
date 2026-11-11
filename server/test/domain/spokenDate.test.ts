@@ -20,6 +20,8 @@ describe("resolveSpokenDate", () => {
     ["three months ago", "2026-08-10", "month"],
     ["two years ago", "2024-11-10", "month"],
     ["last week", "2026-11-02", "week"], // the Monday of the previous week
+    ["Last week. Last Tuesday, I dropped it.", "2026-11-03", "day"], // live session 6e75: was the Monday, 2026-11-02
+    ["last week on Friday", "2026-11-06", "day"],
     ["earlier this week", "2026-11-09", "week"],
     ["last month", "2026-10-01", "month"],
     ["sometime this month", "2026-11-01", "month"],

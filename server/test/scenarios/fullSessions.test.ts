@@ -62,7 +62,8 @@ async function confirm(run: Run, yes = true): Promise<Msg> {
 async function voiceCallWithFields(run: Run, extraFirstTurn: Parameters<typeof save>[] = []) {
   const call = await run.startCall();
   await call.say(
-    FIVE_VOICE_WORDS,
+    // What the customer says includes every extra value's evidence: the model may only save what was said.
+    [FIVE_VOICE_WORDS, ...extraFirstTurn.map((args) => args[2])].join(" "),
     { toolCalls: [...(FIVE_VOICE_FIELDS.toolCalls ?? []), ...extraFirstTurn.map((args) => save(...args))] },
     { toolCalls: [{ name: "request_chat_input", args: { field: "serialNumber" } }] },
     { text: "I've sent a box to the chat for your serial number. Please type it in there." },
@@ -200,7 +201,7 @@ describe("outcomes", () => {
     // it. Until then an unresolved identifier conflict goes to review, which is what this asserts.
     const run = await rig.newRun();
     const call = await run.startCall();
-    await call.say("My IMEI is 3 5 2 0 9 9 0 0 1 7 6 1 4 8 1", { toolCalls: [save("serialNumber", "352099001761481", "three five two ... four eight one", true)] }, { text: "Thanks, please type it in the chat." });
+    await call.say("My IMEI is 3 5 2 0 9 9 0 0 1 7 6 1 4 8 1", { toolCalls: [save("serialNumber", "352099001761481", "My IMEI is 3 5 2 0 9 9 0 0 1 7 6 1 4 8 1", true)] }, { text: "Thanks, please type it in the chat." });
     await call.hangUp();
     const seen: string[] = [];
     for (let i = 0; i < 12; i++) {

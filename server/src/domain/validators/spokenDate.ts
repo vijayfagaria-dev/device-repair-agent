@@ -120,7 +120,12 @@ export function resolveSpokenDate(phrase: string, today: CivilDate): ResolvedDat
     }
   }
 
-  if (/\blast week\b/.test(text)) return { date: addDays(startOfWeek(today), -7), precision: "week" };
+  if (/\blast week\b/.test(text)) {
+    // "last week, last Tuesday": the named weekday of last week (weeks start on Monday), not the week's start.
+    const named = new RegExp(`\\b${WEEKDAY_PATTERN}\\b`).exec(text);
+    if (named) return { date: addDays(startOfWeek(today), -7 + ((weekdayIndex(named[1] ?? "") + 6) % 7)), precision: "day" };
+    return { date: addDays(startOfWeek(today), -7), precision: "week" };
+  }
   if (/\bthis week\b/.test(text)) return { date: startOfWeek(today), precision: "week" };
   if (/\blast month\b/.test(text)) return { date: startOfMonth(addMonths(startOfMonth(today), -1)), precision: "month" };
   if (/\bthis month\b/.test(text)) return { date: startOfMonth(today), precision: "month" };

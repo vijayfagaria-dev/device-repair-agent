@@ -9,6 +9,7 @@
 // Failures: the router has already tried every route (agent/llm.ts); then a filler line is said and the turn is
 // marked failed (the call engine ends the call after two in a row). Empty or refused output also counts as refused.
 import { type ChatToolCall, type LlmClient, LlmError, type LlmMessage, type LlmRoute, type LlmUsage } from "../voice/types.js";
+import { SpeechFilter } from "./speechFilter.js";
 import { type ParsedToolCall, parseToolCall, TOOLS } from "./tools.js";
 
 export const MAX_ROUNDS = 4;
@@ -130,7 +131,10 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
     let finishReason: string | null = null;
     // Held back while it could still be a repeat of `justSaid` (real gpt-oss-20b runs did repeat it despite the prompt).
     let held = justSaid ? "" : null;
-    const emit = (delta: string) => {
+    // Prompt markup, invisible characters and runaway filler never reach the speaker (speechFilter.ts).
+    const filter = new SpeechFilter();
+    const emit = (raw: string) => speak(filter.push(raw));
+    const speak = (delta: string) => {
       if (!delta) return;
       // Only the round's first piece is separated from earlier speech; later pieces are mid-word tokens.
       if (text === "") say(delta.replace(/^\s+/, ""));
@@ -156,6 +160,7 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
     try {
       for await (const chunk of stream) {
         if (input.signal?.aborted) break;
+        if (filter.degenerate) break; // the model is looping on filler: stop reading, keep what was said
         if (chunk.type === "text") {
           if (held !== null) {
             held += chunk.delta;
@@ -170,6 +175,7 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
       out.failed = out.spoken === "" && text === "";
     }
     release(true);
+    speak(filter.flush());
     justSaid = "";
     record.ttftMs = stream.ttftMs;
     deps.onRound?.(record.route, record.usage);

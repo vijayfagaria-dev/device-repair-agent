@@ -20,6 +20,7 @@ import { isRecordField } from "../agent/chatPlanner.js";
 import { systemMessage } from "../agent/prompt.js";
 import { type ChatEventNote, stateMessage } from "../agent/stateMessage.js";
 import type { ParsedToolCall } from "../agent/tools.js";
+import { groundingError } from "../agent/grounding.js";
 import { runTurn, type ToolOutcome, type ToolRunner } from "../agent/turnEngine.js";
 import { cardSentAck, OPTED_OUT_GOODBYE, PROVIDER_TROUBLE, REPROMPTS, SUBMITTED_GOODBYE, savedAck, typeItAck } from "../agent/voiceTemplates.js";
 import { buildTurnMetric } from "../metrics/latency.js";
@@ -467,6 +468,10 @@ export class CallEngine {
     const { port } = this.#o;
     switch (call.name) {
       case "save_field": {
+        // Only what the customer really said (agent/grounding.ts): a made-up value never reaches the session.
+        const said = this.#history.filter((m): m is Extract<LlmMessage, { role: "user" }> => m.role === "user").map((m) => m.content);
+        const ungrounded = groundingError(call.args.spoken_evidence, said);
+        if (ungrounded) return { result: { status: "rejected", error: ungrounded }, ok: false };
         const reply = await port.dispatch<SaveSpokenFieldReply>({ type: "SaveSpokenField", field: call.args.field, value: call.args.value, evidence: call.args.spoken_evidence, userConfirmed: call.args.user_confirmed });
         const field = call.args.field as RecordFieldId;
         if (reply?.status === "valid") return { result: { status: "valid" }, ok: true, ack: savedAck(field, reply.normalized) };

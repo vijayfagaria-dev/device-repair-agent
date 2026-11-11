@@ -14,7 +14,7 @@ export const CARD_FIELDS = [...CHAT_FIELDS, ...OPTIONAL_FIELDS, "submitConfirmat
 export const ToolArgs = {
   save_field: z.strictObject({
     field: z.enum(SPOKEN_FIELDS as [string, ...string[]]),
-    value: z.string().min(1).max(1000),
+    value: z.string().min(1).max(1000).refine((v) => !/[<>]/.test(v), "value must be plain words, no tags or markup"),
     spoken_evidence: z.string().max(1000),
     user_confirmed: z.boolean().optional(),
   }),
