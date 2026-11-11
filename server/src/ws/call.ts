@@ -21,6 +21,7 @@ import type { LlmClient, SttProvider, TtsProvider } from "../voice/types.js";
 import { isProviderRefusal, type QuotaGuard } from "../limits/quotaGuard.js";
 import { acceptSessionSocket, type SocketDeps } from "./handshake.js";
 import type { KeepAliveOptions } from "./keepAlive.js";
+import { closeWithNotice } from "./closing.js";
 
 /** protocol.md §7: /call messages are at most 4 KB (the shared server limit is /chat's). */
 export const MAX_CALL_MESSAGE_BYTES = 4 * 1024;
@@ -93,24 +94,24 @@ export async function callSocketRoutes(app: FastifyInstance, deps: CallSocketDep
       const voice = deps.voice;
       if (!voice) {
         log.error("call refused: voice is not configured");
-        socket.close(CloseCode.SERVER_ERROR, "server error");
+        closeWithNotice(socket, CloseCode.SERVER_ERROR, "server error");
         return;
       }
       if (session.status === "closed") {
-        socket.close(CloseCode.SESSION_CLOSED, "session closed");
+        closeWithNotice(socket, CloseCode.SESSION_CLOSED, "session closed");
         return;
       }
       // Before the capacity check, which must stay synchronous with `starting += 1` (the guard's read is async).
       const quota = await voice.quota?.check();
       if (quota && !quota.ok) {
         log.warn({ reason: quota.reason }, "call refused: quota");
-        socket.close(CloseCode.RATE_LIMITED, "quota");
+        closeWithNotice(socket, CloseCode.RATE_LIMITED, "quota");
         return;
       }
       if (socket.readyState !== socket.OPEN) return;
       if (active.size + starting >= voice.maxConcurrentCalls) {
         log.warn({ active: active.size, max: voice.maxConcurrentCalls }, "call refused: capacity");
-        socket.close(CloseCode.RATE_LIMITED, "capacity");
+        closeWithNotice(socket, CloseCode.RATE_LIMITED, "capacity");
         return;
       }
       starting += 1;
@@ -133,7 +134,7 @@ export async function callSocketRoutes(app: FastifyInstance, deps: CallSocketDep
               : reply.reason === "resumeRequired"
                 ? [CloseCode.RESUME_REQUIRED, "resume required"]
                 : [CloseCode.CALL_ALREADY_ACTIVE, "call already active"];
-          socket.close(code, why);
+          closeWithNotice(socket, code, why);
           return;
         }
         if (closeCode !== null) {
@@ -155,7 +156,7 @@ export async function callSocketRoutes(app: FastifyInstance, deps: CallSocketDep
             if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(message));
           },
           close: (code, reason) => {
-            if (socket.readyState === socket.OPEN || socket.readyState === socket.CONNECTING) socket.close(code, reason);
+            if (socket.readyState === socket.OPEN || socket.readyState === socket.CONNECTING) closeWithNotice(socket, code, reason);
           },
         });
       } catch (err) {
@@ -163,7 +164,7 @@ export async function callSocketRoutes(app: FastifyInstance, deps: CallSocketDep
         log.error({ code: (err as { code?: string }).code, message: (err as Error).message }, "call failed to start");
         // Deepgram refusing the key or the credit (401/402/403) won't fix itself: stop trying for a while.
         if (isProviderRefusal(err)) voice.quota?.providerRefused("deepgram");
-        if (socket.readyState === socket.OPEN) socket.close(CloseCode.SERVER_ERROR, "server error");
+        if (socket.readyState === socket.OPEN) closeWithNotice(socket, CloseCode.SERVER_ERROR, "server error");
         return;
       } finally {
         starting -= 1;
@@ -185,7 +186,7 @@ export async function callSocketRoutes(app: FastifyInstance, deps: CallSocketDep
       accepted.onMessage((data, isBinary) => {
         const bytes = toBuffer(data);
         if (bytes.length > MAX_CALL_MESSAGE_BYTES) {
-          socket.close(CloseCode.MESSAGE_TOO_BIG, "message too big");
+          closeWithNotice(socket, CloseCode.MESSAGE_TOO_BIG, "message too big");
           return;
         }
         // Text frames are reserved (P13); a binary frame of any other length isn't mic audio.

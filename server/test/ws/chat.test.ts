@@ -3,6 +3,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { connect as tcpConnect } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { ChatServerMessageSchema } from "@device-repair/shared/protocol/schemas";
 import { createDatabase, type Database } from "../../src/db/pool.js";
 import { listEvents } from "../../src/db/repos/events.js";
 import { getSession } from "../../src/db/repos/sessions.js";
@@ -94,6 +95,18 @@ describe("refusals: the upgrade completes, then the server closes with a code an
       expect(await socket.closed, query).toEqual({ code: 4400, reason: "invalid session id" });
     }
     expect(await sessionCount()).toBe(before);
+  });
+
+  it("sends a closing message with the same code and reason first, for proxies that rewrite close codes", async () => {
+    for (const [query, origin, code, reason] of [
+      ["?sessionId=abc", ORIGIN, 4400, "invalid session id"],
+      [`?sessionId=${randomUUID()}`, "https://evil.example.com", 4403, "origin not allowed"],
+    ] as const) {
+      const socket = connect(chatUrl(server.ws, query), { origin });
+      expect(await socket.closed).toEqual({ code, reason });
+      expect(socket.messages).toEqual([{ type: "closing", code, reason }]);
+      expect(ChatServerMessageSchema.safeParse(socket.messages[0]).success).toBe(true);
+    }
   });
 
   it("closes 4403 for a foreign or missing Origin, before touching the session", async () => {

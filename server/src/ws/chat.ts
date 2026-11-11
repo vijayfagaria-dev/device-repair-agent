@@ -19,6 +19,7 @@ import type { OptOutReply } from "../session/handlers/optOut.js";
 import { inputErrorWire, inputRequestWire, sameSessionState, sessionStateWire, syncDoneWire, toChatMessages } from "./chatProjection.js";
 import { loadReplay } from "./chatReplay.js";
 import { acceptSessionSocket, type SocketDeps } from "./handshake.js";
+import { closeWithNotice } from "./closing.js";
 
 export interface ChatSocketDeps extends SocketDeps {
   hub: SessionHub;
@@ -93,7 +94,7 @@ class ChatConnection {
       replay = await loadReplay(this.#deps.pool, this.#sessionId);
     } catch (err) {
       this.#log.error({ code: (err as { code?: string }).code, message: (err as Error).message }, "chat replay failed");
-      this.#socket.close(CloseCode.SERVER_ERROR, CloseReason.SERVER_ERROR);
+      closeWithNotice(this.#socket, CloseCode.SERVER_ERROR, CloseReason.SERVER_ERROR);
       return;
     }
     if (this.#socket.readyState !== this.#socket.OPEN) return;

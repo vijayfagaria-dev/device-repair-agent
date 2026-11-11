@@ -9,6 +9,7 @@ import type { Session } from "../db/repos/sessions.js";
 import type { CreationLimiter } from "../session/creationLimit.js";
 import { ensureSession, type NewSessionSettings, type SessionOrigin } from "../session/ensureSession.js";
 import { type KeepAliveOptions, keepAlive } from "./keepAlive.js";
+import { closeWithNotice } from "./closing.js";
 
 export interface SocketDeps {
   pool: pg.Pool;
@@ -58,14 +59,14 @@ export async function acceptSessionSocket(
 
   if (!isAllowedOrigin(request.headers.origin, deps.publicOrigin)) {
     request.log.warn({ path: request.routeOptions.url }, "websocket refused: origin not allowed");
-    socket.close(CloseCode.ORIGIN_NOT_ALLOWED, CloseReason.ORIGIN_NOT_ALLOWED);
+    closeWithNotice(socket, CloseCode.ORIGIN_NOT_ALLOWED, CloseReason.ORIGIN_NOT_ALLOWED);
     return null;
   }
 
   const sessionId = parseSessionId((request.query as Record<string, unknown> | undefined)?.sessionId);
   if (!sessionId) {
     request.log.info({ path: request.routeOptions.url }, "websocket refused: invalid session id");
-    socket.close(CloseCode.INVALID_SESSION_ID, CloseReason.INVALID_SESSION_ID);
+    closeWithNotice(socket, CloseCode.INVALID_SESSION_ID, CloseReason.INVALID_SESSION_ID);
     return null;
   }
 
@@ -75,12 +76,12 @@ export async function acceptSessionSocket(
     result = await ensureSession(deps.pool, sessionId, { via, limit: { limiter: deps.sessionLimiter, key: request.ip }, newSession: deps.newSession });
   } catch (err) {
     log.error({ code: (err as { code?: string }).code, message: (err as Error).message }, "websocket refused: session lookup failed");
-    socket.close(CloseCode.SERVER_ERROR, CloseReason.SERVER_ERROR);
+    closeWithNotice(socket, CloseCode.SERVER_ERROR, CloseReason.SERVER_ERROR);
     return null;
   }
   if (!result.ok) {
     log.warn("websocket refused: new-session rate limit");
-    socket.close(CloseCode.RATE_LIMITED, CloseReason.NEW_SESSION_RATE_LIMITED);
+    closeWithNotice(socket, CloseCode.RATE_LIMITED, CloseReason.NEW_SESSION_RATE_LIMITED);
     return null;
   }
   if (result.created) log.info({ via }, "session created");

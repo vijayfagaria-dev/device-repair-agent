@@ -172,7 +172,7 @@ describe("replay (protocol.md §4)", () => {
     try {
       const socket = connect(`${app.ws}/chat?sessionId=${id}`);
       expect(await socket.closed).toEqual({ code: 1011, reason: "server error" });
-      expect(socket.messages).toEqual([]);
+      expect(socket.messages).toEqual([{ type: "closing", code: 1011, reason: "server error" }]);
       await waitFor(() => services.hub.listenerCount(id) === 0, "listener cleanup");
     } finally {
       await app.close();

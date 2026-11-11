@@ -3,6 +3,7 @@
 import fastifyWebsocket from "@fastify/websocket";
 import { CloseCode, CloseReason } from "@device-repair/shared/protocol";
 import type { FastifyInstance } from "fastify";
+import { closeWithNotice } from "./closing.js";
 
 /** The largest inbound message on any socket (protocol.md §7: /chat 64 KB). /call enforces its smaller 4 KB itself. */
 export const MAX_WS_PAYLOAD_BYTES = 64 * 1024;
@@ -25,7 +26,7 @@ export async function websocketSupport(app: FastifyInstance): Promise<void> {
     // dropped, so shutdown stays well inside the process's 10 s limit.
     preClose(done) {
       const server = app.websocketServer;
-      for (const client of server.clients) client.close(CloseCode.SERVER_RESTARTING, CloseReason.SERVER_RESTARTING);
+      for (const client of server.clients) closeWithNotice(client, CloseCode.SERVER_RESTARTING, CloseReason.SERVER_RESTARTING);
       const force = setTimeout(() => {
         for (const client of server.clients) client.terminate();
       }, SHUTDOWN_CLOSE_GRACE_MS);
