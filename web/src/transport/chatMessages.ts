@@ -28,6 +28,8 @@ export function handleChatMessage(ui: Ui, data: unknown, replay?: ReplayTracker)
     case ChatServerMessageType.INPUT_CANCEL:
       ui.cancelInputCard(msg.requestId, msg.reason);
       break;
+    case ChatServerMessageType.CLOSING:
+      break; // read by useChat before this, to learn why the socket closes
     case ChatServerMessageType.RECORD:
       ui.showRecord(msg.record);
       break;

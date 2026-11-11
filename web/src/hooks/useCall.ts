@@ -7,7 +7,7 @@ import { MIC_FRAME_BYTES, MIC_FRAME_MS } from "@device-repair/shared/protocol";
 import { CallState } from "../state/conversation";
 import type { CallControls, Ui } from "../state/ui";
 import { handleCallMessage } from "../transport/callMessages";
-import { closeQuietly, socketUrl } from "../transport/socket";
+import { closeQuietly, parseClosing, socketUrl } from "../transport/socket";
 
 // Mic audio allowed to wait in the socket's send buffer before new frames are dropped.
 const MAX_SEND_BACKLOG_MS = 500;
@@ -75,8 +75,16 @@ export function useCall(ui: Ui, server: Server | null): CallControls {
       ui.setCall(CallState.CONNECTED, "on call");
       ui.addNote("Call started");
     };
-    ws.onmessage = ({ data }) => handleCallMessage(ui, data);
-    ws.onclose = ({ code, reason }) => {
+    let noticed: { code: number; reason: string } | null = null; // from the server's `closing` message
+    ws.onmessage = ({ data }) => {
+      const closing = parseClosing(data);
+      if (closing) noticed = closing;
+      else handleCallMessage(ui, data);
+    };
+    ws.onclose = (event) => {
+      // A proxy may replace the server's close code (Render does), so the code in the `closing` message wins.
+      const code = noticed?.code ?? event.code;
+      const reason = noticed?.reason ?? event.reason;
       release();
       const refused = callCloseMessage(code);
       if (connected && refused) {

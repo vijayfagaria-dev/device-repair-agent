@@ -22,3 +22,13 @@ export function closeQuietly(ws: WebSocket): void {
   ws.onclose = null;
   ws.close();
 }
+
+/**
+ * The `closing` message the server sends just before it closes a socket (protocol.md v1.7), or null for any other
+ * message. Render's proxy turns custom 4xxx close codes into 1000/1005/1006, so the page prefers this code.
+ */
+export function parseClosing(data: unknown): { code: number; reason: string } | null {
+  const msg = parseMessage<{ type: string; code?: unknown; reason?: unknown }>(data);
+  if (msg?.type !== "closing" || typeof msg.code !== "number") return null;
+  return { code: msg.code, reason: typeof msg.reason === "string" ? msg.reason : "" };
+}

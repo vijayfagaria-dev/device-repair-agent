@@ -9,7 +9,7 @@ import type { SendInput, Ui } from "../state/ui";
 import { chatRetryNotice } from "../lib/closeCodes";
 import { permanentCloseNotice } from "../lib/sessionState";
 import { handleChatMessage, newReplayTracker } from "../transport/chatMessages";
-import { closeQuietly, socketUrl } from "../transport/socket";
+import { closeQuietly, parseClosing, socketUrl } from "../transport/socket";
 import { uploadFiles } from "../transport/upload";
 
 const FIRST_RETRY_MS = 1000;
@@ -48,8 +48,14 @@ export function useChat(
         ui.setNotice(null);
       };
       const replay = newReplayTracker(); // each connection starts with a replay
-      ws.onmessage = ({ data }) => handleChatMessage(ui, data, replay);
-      ws.onclose = ({ code }) => {
+      let noticed: number | null = null; // the code from the server's `closing` message (a proxy may change the real one)
+      ws.onmessage = ({ data }) => {
+        const closing = parseClosing(data);
+        if (closing) noticed = closing.code;
+        else handleChatMessage(ui, data, replay);
+      };
+      ws.onclose = (event) => {
+        const code = noticed ?? event.code;
         // 4400/4403 can't be fixed by reconnecting (protocol.md §6): stop and say why. Everything else retries.
         const permanent = permanentCloseNotice(code);
         if (permanent) ui.setNotice(permanent);

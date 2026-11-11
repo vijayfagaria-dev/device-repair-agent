@@ -15,6 +15,8 @@ export function handleCallMessage(ui: Ui, data: unknown): void {
     case CallServerMessageType.TRANSCRIPT:
       ui.addTranscript(msg);
       break;
+    case CallServerMessageType.CLOSING:
+      break; // read by useCall before this, to learn why the socket closes
     case undefined:
       break;
     default:
