@@ -45,3 +45,13 @@ describe("internal names", () => {
     expect(out).toBe("Your device model is set. Now the serial number");
   });
 });
+
+describe("markdown", () => {
+  it("never speaks emphasis marks (user report: 'star star yes')", () => {
+    expect(cleanSpeech("Check the chat and tap **Yes** to submit your `claim`.")).toBe("Check the chat and tap Yes to submit your claim.");
+  });
+  it("catches marks split across streamed pieces", () => {
+    const f = new SpeechFilter();
+    expect(["tap *", "*Yes*", "* now"].map((d) => f.push(d)).join("") + f.flush()).toBe("tap Yes now");
+  });
+});

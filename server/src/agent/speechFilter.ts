@@ -13,6 +13,8 @@ const hideInternal = (text: string): string => text.replace(INTERNAL, (name) => 
 
 /** Zero-width and bidi-control characters: never meaningful in speech. */
 const INVISIBLE = /[​-‏⁠-⁤‪-‮﻿­]/g;
+/** Markdown emphasis and code marks: a voice reads "**Yes**" as "star star yes". */
+const MARKDOWN = /[*`]+|~~/g;
 /** A tag that was not closed within this many characters is plain text, not markup. */
 const MAX_TAG = 160;
 /** Consecutive filler (whitespace, dots, ellipses) beyond this means the model is looping. */
@@ -30,7 +32,7 @@ export class SpeechFilter {
 
   /** Cleaned text for one streamed delta ("" while it is inside a tag or only filler). */
   push(delta: string): string {
-    let input = this.#pendingTag + this.#word + delta.replace(INVISIBLE, "");
+    let input = this.#pendingTag + this.#word + delta.replace(INVISIBLE, "").replace(MARKDOWN, "");
     this.#word = "";
     this.#pendingTag = "";
     let out = "";

@@ -91,6 +91,9 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
   let justSaid = "";
   /** A stream that broke mid-way gets one more round, told where it was cut off (a dead line is worse than a retry). */
   let retriedBreak = false;
+  /** One question per turn: after the first "?" nothing more is spoken (live: the model asked urgency four times, then
+   *  wrote the customer's next answer and its own plan into the reply). */
+  let asked = false;
   let hint: LlmMessage | null = null;
 
   for (let round = 0; round < MAX_ROUNDS; round++) {
@@ -141,7 +144,11 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
     // Prompt markup, invisible characters and runaway filler never reach the speaker (speechFilter.ts).
     const filter = new SpeechFilter();
     const emit = (raw: string) => speak(filter.push(raw));
-    const speak = (delta: string) => {
+    const speak = (raw: string) => {
+      if (asked || !raw) return;
+      const q = raw.indexOf("?");
+      const delta = q === -1 ? raw : raw.slice(0, q + 1);
+      if (q !== -1) asked = true;
       if (!delta) return;
       // Only the round's first piece is separated from earlier speech; later pieces are mid-word tokens.
       if (text === "") say(delta.replace(/^\s+/, ""));
@@ -246,7 +253,7 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
       break;
     }
     // Spoken already and only a quiet rejection (a refused made-up value): no second round that asks again.
-    const needFollowUp = !text.trim() || outcomes.some((o) => !o.ok && !o.quiet);
+    const needFollowUp = !asked && (!text.trim() || outcomes.some((o) => !o.ok && !o.quiet));
     if (!needFollowUp) break;
   }
   return out;

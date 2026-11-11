@@ -152,9 +152,27 @@ describe("no double acknowledgement (seen in a real gpt-oss-20b call)", () => {
 
   it("a follow-up that only starts the same way is spoken in full", async () => {
     const t = setup(() => ({ result: { status: "valid" }, ok: true, ack: "Got it." }));
-    t.llm.enqueue({ toolCalls: [save("deviceType", "smartphone")] }, { text: "Got itchy fingers? Which model is it?", pieceChars: 4 });
+    t.llm.enqueue({ toolCalls: [save("deviceType", "smartphone")] }, { text: "Got itchy fingers. Which model is it?", pieceChars: 4 });
     const out = await t.go();
-    expect(out.spoken).toBe("Got it. Got itchy fingers? Which model is it?");
+    expect(out.spoken).toBe("Got it. Got itchy fingers. Which model is it?");
+  });
+
+  // Live (2026-11-11 22:45): the model asked urgency four times, wrote "It started last Tuesday." as if the customer had
+  // said it, and ended with its own plan. One question per turn: speech stops at the first "?".
+  it("speech stops at the first question: no repeats, no invented customer reply, no narrated plan", async () => {
+    const t = setup();
+    t.llm.enqueue({ text: "What seems to be wrong with it? It started last Tuesday. How urgent is it? Now need to request serial number via chat.", pieceChars: 7 });
+    const out = await t.go();
+    expect(out.spoken).toBe("What seems to be wrong with it?");
+    expect(out.messages).toEqual([{ role: "assistant", content: "What seems to be wrong with it?" }]);
+  });
+
+  it("the cap holds across rounds: a follow-up after a question is not spoken", async () => {
+    const t = setup(() => ({ result: { status: "invalid", error: "which date?" }, ok: false }));
+    t.llm.enqueue({ text: "When did it start?", toolCalls: [save("problemStartedAt", "soon")] }, { text: "Could you tell me when it started?" });
+    const out = await t.go();
+    expect(out.spoken).toBe("When did it start?");
+    expect(t.llm.requests).toHaveLength(1);
   });
 
   // Live session ed7ce483 (2026-11-11): the reply broke after "When did" and the call sat silent until the user left.
