@@ -220,7 +220,7 @@ describe("tampered or expired signatures", () => {
       change(copy);
       return fetch(copy);
     };
-    expect((await mutate((u) => u.searchParams.set("sig", `${u.searchParams.get("sig")?.slice(0, -1)}A`))).status).toBe(403);
+    expect((await mutate((u) => u.searchParams.set("sig", `${(u.searchParams.get("sig") ?? "").slice(0, -1)}${(u.searchParams.get("sig") ?? "").endsWith("A") ? "B" : "A"}`))).status).toBe(403);
     expect((await mutate((u) => u.searchParams.set("exp", String(Number(u.searchParams.get("exp")) + 1)))).status).toBe(403);
     expect((await mutate((u) => u.searchParams.delete("sig"))).status).toBe(403);
     expect((await mutate((u) => (u.pathname = u.pathname.replace(fileId, `${fileId}x`)))).status).toBe(403);

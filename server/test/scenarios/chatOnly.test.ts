@@ -357,7 +357,8 @@ describe("inbound limit per socket (P4-T02; deferred from the P3 audit)", () => 
     const before = (await db.pool.query<{ n: number }>("SELECT count(*)::int AS n FROM events WHERE session_id = $1", [chat.sessionId])).rows[0]?.n;
     for (let i = 0; i < 25; i++) chat.socket.ws.send(JSON.stringify({ type: "inputResponse", requestId: "req_nope_1", field: "x", value: "x" }));
     await chat.until((m) => m.type === "inputError" && String(m.message).startsWith("You're sending answers too quickly"));
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    // All 25 replies, not a fixed sleep: a slow CI machine takes longer than 200 ms to answer them.
+    for (let waited = 0; chat.all.filter((m) => m.type === "inputError").length < 25 && waited < 10_000; waited += 50) await new Promise((resolve) => setTimeout(resolve, 50));
     const errors = chat.all.filter((m) => m.type === "inputError").map((m) => m.message);
     expect(errors.filter((m) => String(m).startsWith("You're sending answers too quickly"))).toHaveLength(5);
     expect(errors.filter((m) => m === "This request is no longer active.")).toHaveLength(20);
