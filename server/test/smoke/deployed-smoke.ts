@@ -80,6 +80,12 @@ interface SocketResult {
 }
 
 /** Opens a socket, runs `whileOpen`, and reports what happened. Never throws on a close. */
+/** The code and reason the server gave: its `closing` message (protocol v1.7; Render's proxy rewrites close codes), else the close frame. */
+function refusal(result: SocketResult): { code: number; reason: string } | null {
+  const closing = result.messages.find((m): m is { type: "closing"; code: number; reason: string } => (m as { type?: string }).type === "closing");
+  return closing ? { code: closing.code, reason: closing.reason } : result.close;
+}
+
 function socketSession(
   url: string,
   origin: string,
@@ -186,13 +192,14 @@ async function main(): Promise<number> {
   }
 
   await check("WSS /chat?sessionId=abc → close 4400", async () => {
-    const { opened, close } = await socketSession(`${ws}/chat?sessionId=abc`, origin, () => sleep(TIMEOUT_MS));
-    assert(opened, "upgrade did not complete");
+    const result = await socketSession(`${ws}/chat?sessionId=abc`, origin, () => sleep(TIMEOUT_MS));
+    const close = refusal(result);
+    assert(result.opened, "upgrade did not complete");
     assert(close?.code === 4400, `closed with ${close?.code} ${close?.reason}`);
     return close.reason;
   });
   await check("WSS /chat from a foreign Origin → close 4403", async () => {
-    const { close } = await socketSession(`${ws}/chat?sessionId=${randomUUID()}`, "https://smoke-test.invalid", () => sleep(TIMEOUT_MS));
+    const close = refusal(await socketSession(`${ws}/chat?sessionId=${randomUUID()}`, "https://smoke-test.invalid", () => sleep(TIMEOUT_MS)));
     assert(close?.code === 4403, `closed with ${close?.code} ${close?.reason}`);
     return close.reason;
   });
