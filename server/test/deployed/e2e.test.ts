@@ -8,7 +8,7 @@ import { randomBytes } from "node:crypto";
 import { createServer as createNetServer } from "node:net";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { buildApp } from "../../src/app.js";
+import { buildApp, settleCalls } from "../../src/app.js";
 import { Secret } from "../../src/config.js";
 import type { Database } from "../../src/db/pool.js";
 import { OutboxWorker } from "../../src/delivery/worker.js";
@@ -142,6 +142,8 @@ async function startDeployment(schema: TestSchema, options: { breakBargeIn?: boo
   async function halt() {
     await outbox.stop();
     await app.close();
+    // Like server/src/index.ts: let every call finish ending before the pool closes (its EndCall must commit).
+    await settleCalls(app);
     await db.pool.end().catch(() => {});
   }
   await boot();
