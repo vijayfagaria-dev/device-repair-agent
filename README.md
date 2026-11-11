@@ -1,22 +1,51 @@
-# Device repair claim: a voice + chat agent
+# Device Repair Claim Agent
 
-A user reports a faulty device. The conversation starts on a **web voice call**; the agent collects what is easy to say by talking and sends **chat cards** (a serial number, an invoice, a service centre, an email) in the same page while the call goes on. If the call drops, the chat carries on from the same state. Every session ends with **one sanitized, versioned JSON record**, stored and delivered to a webhook exactly once in effect.
+[![CI](https://github.com/vijayfagaria-dev/device-repair-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/vijayfagaria-dev/device-repair-agent/actions/workflows/ci.yml)
+![Node](https://img.shields.io/badge/node-22.18%2B-339933?logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
+![Postgres](https://img.shields.io/badge/Postgres-Neon-4169e1?logo=postgresql&logoColor=white)
 
-> **Status of this README.** Everything below describes the code in this repository and is checked against it. One thing is **not available yet** and is marked `PENDING` where it matters: the measured cost and latency numbers (they must come from real sessions on the deployed system). Nothing in this README is an estimate presented as a measurement.
+A voice and chat agent that registers a device repair claim. A customer calls from the browser and talks to **Riya**; whatever is awkward to say aloud (a serial number, an invoice, an email address) arrives as a **card in the chat on the same page**, while the call carries on. If the call drops, the chat picks up from exactly where it stopped. Every session ends in **one sanitized, versioned JSON record**, stored and delivered to a webhook exactly once in effect.
 
-| | |
-|---|---|
-| **Public URL** | **https://device-repair-agent.onrender.com/** (Render free web service, Virginia). **It runs on a free instance that sleeps after 15 minutes without traffic, so the first request after a quiet period can take about a minute to wake it** (the page keeps retrying and loads once it is up; no data is lost, everything is in Postgres). Nothing keeps it awake on purpose: an always-on pinger would use up the free instance hours. If it looks stuck, wait a minute and reload, or open `/healthz` first to wake it. |
-| **Try it** | Open the URL, tap **Call**, allow the microphone, and say what is wrong with a device. Cards appear in the thread as the agent asks for them. Use made-up data only (see *Security*). |
-| **Starter UI demo** | `/?demo=1` runs the scripted demo with no backend. |
+**Live:** https://device-repair-agent.onrender.com/ · [How it works](#how-it-works) · [Run it locally](#getting-started) · [API](#api-reference)
+
+> The app runs on Render's free tier, which sleeps after 15 minutes without traffic. The first request after a quiet period can take about a minute to wake it; the page keeps retrying and nothing is lost, because all state lives in Postgres. Opening `/healthz` first wakes it. Use made-up data only (see [Security](#security)).
 
 ## Contents
-[Architecture and shared state](#architecture-and-shared-state) · [The final record](#the-final-record) · [Outcomes, delivery and revisions](#outcomes-delivery-and-revisions) · [Stack and cost](#stack-and-cost-150-words) · [Product decisions](#product-decisions-where-the-brief-was-vague) · [Edge cases](#edge-cases) · [What I trust least](#what-i-trust-least) · [Cost and latency](#cost-and-latency) · [Next week](#what-i-would-do-with-another-week) · [AI tools](#ai-tools) · [Run locally](#run-it-locally) · [Security controls](#security-controls) · [JSON Schema](#json-schema) · [API reference](#api-reference)
 
-## Architecture and shared state
+- [What it does](#what-it-does)
+- [How it works](#how-it-works)
+  - [One conversation, two channels](#one-conversation-two-channels)
+  - [The call agent](#the-call-agent)
+  - [Keeping the model honest](#keeping-the-model-honest)
+- [From conversation to record](#from-conversation-to-record)
+  - [Validation and normalization](#validation-and-normalization)
+  - [Conflicts between channels](#conflicts-between-channels)
+  - [Outcomes, delivery and revisions](#outcomes-delivery-and-revisions)
+- [Design decisions](#design-decisions)
+- [Stack and cost](#stack-and-cost)
+- [Performance](#performance)
+- [Reliability and limits](#reliability-and-limits)
+- [Roadmap](#roadmap)
+- [Getting started](#getting-started)
+- [Security](#security)
+- [API reference](#api-reference)
+- [Built with AI](#built-with-ai)
+
+## What it does
+
+A customer reports a faulty device. The conversation is split by what each channel is good at:
+
+| By voice | In the chat |
+|---|---|
+| Device type, brand and model, what is wrong, when it started, how urgent it is | Serial number or IMEI, purchase invoice (PDF or image), service centre, email address, optional photos and notes |
+
+Both channels write to the same session. A card answered while the call is running is acknowledged by the agent a moment later; a call that drops leaves the chat to finish the claim; a reload, a second tab or a server restart all show the same thread. The claim is submitted only when the customer taps **Yes** on a "Submit claim?" card, and the result is a validated record that another service can consume without cleaning anything up.
+
+## How it works
 
 ```
-Browser (React starter UI, same origin)
+Browser (React, the starter UI, same origin)
   ├─ WS /call  : mic PCM16 16 kHz in, agent PCM16 24 kHz + live transcript lines out
   └─ WS /chat  : cards, messages, record out; answers, Stop, latency samples in
         │
@@ -32,20 +61,44 @@ calls, files, usage ledger, turn metrics, records, outbox, timers, received reco
 Deepgram (Nova-3 STT, Aura-2 TTS) · Groq (gpt-oss-20b, then gpt-oss-120b) · Gemini (last-resort fallback)
 ```
 
-**One conversation, two channels.** The two sockets are views of one session, keyed by a client-generated UUIDv4 (the session id is the capability; the server creates the session lazily on the first valid connect or upload). There is no per-channel state:
+### One conversation, two channels
 
-- **Every change is a command** run by one processor: it takes the session's row lock (`SELECT … FOR UPDATE`), writes in a transaction (state tables plus an append-only `events` row), and **publishes after commit**. The call engine and the chat socket both submit commands; neither writes tables directly.
-- **Collected values are candidates, never overwrites.** A value from the call or from a card appends a `field_candidates` row. The *effective* field (value, source, status) and any conflict are computed by a resolver from those rows each time, so the two channels cannot drift.
-- **Chat during a call:** a submitted card commits, the hub publishes, and the call engine (subscribed to the session) puts the event into the next state message the model sees; it acknowledges at a natural moment (the agent is idle and the user has been quiet for 1.2 s). Rejected or cancelled cards are reported the same way.
-- **The call ends** (hang-up, dropped socket, `end_call`, server restart): `EndCall` commits, then a post-commit reconcile opens the next missing card in chat. Reconcile also runs on every chat connect and at boot, so a crash between the two steps cannot stall a session.
-- **Chat reconnects** replay history, the open card and the latest record from the database (subscribing to live events first, so nothing committed during the replay is lost). A reload, a second tab and a restarted server all see the same thread.
-- **A restart loses nothing:** state, files, timers and the delivery outbox are in Postgres. At boot the server marks dangling calls ended (`server_restart`), re-arms timers, reclaims expired outbox leases, runs reconcile for active sessions, and only then listens.
+The two sockets are views of one session, keyed by a client-generated UUIDv4 (the id is the capability; the server creates the session lazily on the first valid connect or upload). There is no per-channel state, which is what keeps the channels from drifting apart:
 
-**The call agent.** A cascaded pipeline run on the server: Deepgram streams speech to text; the end of the user's turn is the STT end-of-utterance event; the model (tool calls `save_field`, `request_chat_input`, `flag_for_review`, `opt_out`, `end_call`, validated server-side before they run) answers; text is cut into sentences and streamed to Deepgram Aura-2; audio frames are tagged with the agent-turn id so late frames of a cancelled turn are dropped. gpt-oss-20b mostly answers with tool calls and no speech, so code speaks a templated acknowledgement from the validated calls ("Got it, Apple iPhone 14 Pro.") while the follow-up call writes the next question. **Barge-in:** speech starting while the agent talks, with at least 2 interim words or 400 ms of speech (guards against echo and coughs), first stops forwarding audio and sends `stopPlayback`, then aborts the model, and truncates the agent's transcript line to what the user actually heard (marked `[interrupted]`).
+- **Every change is a command**, run by one processor: it takes the session's row lock (`SELECT … FOR UPDATE`), writes in a transaction (state tables plus an append-only `events` row), and **publishes after commit**. The call engine and the chat socket both submit commands; neither writes tables directly.
+- **Collected values are candidates, never overwrites.** A value from the call or from a card appends a `field_candidates` row. The *effective* field (value, source, status) and any conflict are recomputed from those rows by a resolver each time.
+- **Chat during a call.** A submitted card commits, the hub publishes, and the call engine, subscribed to the session, hands the event to the model in its next state message. The agent acknowledges it at a natural moment: when it is idle and the customer has been quiet for 1.2 s. Rejected or cancelled cards are reported the same way.
+- **When the call ends** (hang-up, dropped socket, `end_call`, server restart), `EndCall` commits and a post-commit reconcile opens the next missing card in chat. Reconcile also runs on every chat connect and at boot, so a crash between the two steps cannot strand a session.
+- **Chat reconnects** replay the history, the open card and the latest record from the database, subscribing to live events first so nothing committed during the replay is lost.
+- **A restart loses nothing.** State, files, timers and the delivery outbox are in Postgres. At boot the server marks dangling calls ended (`server_restart`), re-arms timers, reclaims expired outbox leases, reconciles active sessions, and only then starts listening.
 
-## The final record
+### The call agent
 
-The shape is defined by [`shared/record.schema.json`](shared/record.schema.json) (JSON Schema 2020-12, `schemaVersion: "1.0"`). Example (abridged):
+The call is a cascaded pipeline run on the server. Deepgram streams speech to text, and the STT end-of-utterance event marks the end of the customer's turn. The model answers with tool calls (`save_field`, `request_chat_input`, `flag_for_review`, `opt_out`, `end_call`), each validated server-side before anything runs. Reply text is cut into sentences and streamed to Deepgram Aura-2, and every audio frame carries the agent-turn id so late frames of a cancelled turn are dropped.
+
+gpt-oss-20b mostly answers with tool calls and no speech, so code speaks a templated acknowledgement built from the validated calls ("Got it, Apple iPhone 14.") while the model writes the next question. That "acknowledge, then ask" shape is what keeps the reply latency down (see [Performance](#performance)).
+
+**Barge-in.** When speech starts while the agent is talking, with at least two interim words or 400 ms of voice (which filters out echo and coughs), the server first stops forwarding audio and sends `stopPlayback`, then aborts the model, and truncates the agent's transcript line to what the customer actually heard, marked `[interrupted]`.
+
+**The transcript follows the voice.** Each sentence appears in the transcript when its audio starts playing, not when it is synthesised, so the text never runs ahead of what the customer hears. The server tracks the playback position per sentence for this, and for the truncation above.
+
+### Keeping the model honest
+
+Real calls showed what a small free-tier model does when left to write speech and call tools in one free-form generation: it saves values nobody said, plays the customer's part, repeats itself, and reads its own markup aloud. Prompt rules alone did not stop that, so the behaviour is enforced in code, and each rule below exists because a recorded session broke it:
+
+- **Saved values must be grounded.** `save_field` carries the customer's exact words as evidence; the server only accepts it when those words appear in the customer's last few utterances. A made-up urgency, a description nobody gave, or markup copied from the state message is rejected quietly, and the model is told to ask instead.
+- **One question per turn.** Speech stops at the first question mark, and no follow-up round runs after a question. This ends the repeated questions and the model answering for the customer.
+- **Speech is cleaned before it is spoken or stored.** Markup and markdown (`**Yes**` would be read as "star star yes"), zero-width characters, runaway filler and internal names such as `deviceModel` or `pendingChatCards` are removed or turned into plain words, and glued sentences are separated. A reply that degenerates into filler is cut off.
+- **A follow-up round only runs when there is something to ask.** If every voice field is collected and a card is already open, the system's own announcement is the whole reply; the model is not called again to restate it.
+- **Stale text is dropped.** If a chat event arrives while the model is writing, text drafted from the older state is not spoken (it would ask for what the customer has just typed); the event gets its own turn with fresh state.
+- **A broken stream is retried once**, told where it was cut off, so a dropped connection does not leave the line silent mid-sentence.
+- **Speech recognition is primed** with the repair vocabulary (device types, brands, damage words) through Deepgram keyterms, which helps with mishearings such as "Riya" becoming "Reuters".
+
+Most of these have regression tests built from the transcripts of the failing sessions.
+
+## From conversation to record
+
+The record's shape is defined by [`shared/record.schema.json`](shared/record.schema.json) (JSON Schema 2020-12, `schemaVersion: "1.0"`). An abridged example:
 
 ```json
 {
@@ -74,9 +127,11 @@ The shape is defined by [`shared/record.schema.json`](shared/record.schema.json)
 ```
 (The cost values above are placeholders; real records carry the session's ledger total.)
 
-**Fields.** Collected on the call (each also has a chat-card fallback, so a session can finish in chat alone): `deviceType`, `deviceModel`, `problemDescription`, `problemStartedAt`, `urgency`. Awkward by voice, so collected in chat: `serialNumber` (serial or IMEI), `purchaseInvoice` (PDF or image), `serviceCentre` (select), `email`. Optional: `additionalPhotos`, `additionalNotes`. Completion also needs the explicit "Submit claim?" confirmation.
+**Fields.** Collected on the call, each with a chat-card fallback so a session can finish in chat alone: `deviceType`, `deviceModel`, `problemDescription`, `problemStartedAt`, `urgency`. Awkward by voice, so collected in chat: `serialNumber` (serial or IMEI), `purchaseInvoice`, `serviceCentre`, `email`. Optional: `additionalPhotos`, `additionalNotes`. Completion also needs the explicit "Submit claim?" confirmation. In the page, the record is shown as readable text (for example "Apple iPhone 14", "10 Nov 2026", "PNG, 79 KB"); the JSON above is what is delivered.
 
-**Validation and normalization** (pure functions in `server/src/domain`, run on every candidate from either channel; time zone Asia/Kolkata):
+### Validation and normalization
+
+Pure functions in `server/src/domain` run on every candidate from either channel, in the Asia/Kolkata time zone:
 
 | Field | Valid when | Normalized to |
 |---|---|---|
@@ -92,7 +147,11 @@ The shape is defined by [`shared/record.schema.json`](shared/record.schema.json)
 
 All strings: Unicode NFC (NFKC for identifiers, so full-width digits become ASCII), control and invisible characters stripped, whitespace collapsed, length caps. After **3 invalid attempts** on a required field the agent stops asking; the field stays `invalid` and finalization flags it for review.
 
-**Sanitization pipeline** in the record builder: string hygiene → per-field normalization → conflict resolution → internal fields stripped (no raw transcripts, no model evidence strings, no file paths) → files become signed descriptors → deterministic key order → JSON Schema validation (Ajv) → content hash. A record that fails its own schema is a bug: it is logged and the session is forced to `needsReview`.
+### Sanitization pipeline
+
+The record builder runs: string hygiene → per-field normalization → conflict resolution → internal fields stripped (no raw transcripts, no model evidence strings, no file paths) → files become signed descriptors → deterministic key order → JSON Schema validation (Ajv) → content hash. A record that fails its own schema is a bug: it is logged and the session is forced to `needsReview`.
+
+### Conflicts between channels
 
 **Conflicts.** A conflict exists when both channels hold a valid candidate whose *normalized* values differ (equal after normalization is recorded as agreement, `resolution: "same"`). Every conflict goes into `record.conflicts[]` with its resolution and reason.
 
@@ -105,7 +164,7 @@ All strings: Unicode NFC (NFKC for identifiers, so full-width digits become ASCI
 
 An identifier conflict whose losing value the user had explicitly confirmed is **unresolved**; at finalization that is review rule R-2 (`needsReview`). *Known gap: the "which is correct?" card that would let the user resolve it is not built (see [Edge cases](#edge-cases)).*
 
-## Outcomes, delivery and revisions
+### Outcomes, delivery and revisions
 
 Finalization runs only on these triggers: the user taps **Yes** on the "Submit claim?" card (`confirmSubmit`); the user confirms an opt-out on the call or after pressing **Stop** in chat (`optOutConfirmed`); a persisted idle timer fires after 15 minutes without a call or user activity (`idleTimeout`, configurable); and a token-gated test trigger.
 
@@ -122,63 +181,37 @@ Precedence: `optedOut` > `needsReview` > `completed` > `partial`.
 
 **Revisions.** Explicit user activity (a card answer, a new call; not a socket reconnect) reopens a finalized session (`session.reopened`). The next finalization writes revision n+1, **only if the content hash changed**; the hash covers outcome, reason, fields, missing fields, conflicts, review flags and the confirmation, so a change in engagement or cost alone never makes a revision. Revisions are immutable (database triggers reject `UPDATE`/`DELETE` on `records`); a `partial` stays exactly as delivered and the later `completed` is a new row that names its predecessor. After `optedOut`, a returning user is first asked "Resume your claim?"; No keeps the session opted out with no new revision. Sessions close 7 days after last activity (no reopen, no new revision; a pending finalize fires first, so every session gets a record).
 
-## Stack and cost (150 words)
+## Design decisions
+
+Where the brief left room, these are the choices made and the reasoning behind them.
+
+| Decision | Why |
+|---|---|
+| The scenario is a **device repair claim**, with the call and chat split above | Spoken fields are easy to say; identifiers and files are exactly what speech recognition gets wrong |
+| **Completion needs an explicit "Submit claim?" tap in chat** | The business receives a confirmed record, and a misheard "yes" cannot submit it |
+| **Identifiers must be typed.** A serial number or email heard on the call is saved as `unverified` and the agent asks for it in the chat | Speech recognition is unreliable for alphanumerics |
+| **One page, one session.** The call and chat share the starter's single page; the same session link works in a second tab | Matches the brief's UI and makes reconnects trivial |
+| **A header Stop button** opens a confirmation card; only Yes opts out (the chat has no free-text field) | An accidental tap cannot end a claim |
+| **Silence:** a re-prompt at 8 s; after two, the call ends and the chat continues | A quiet line should not hang the session, and the chat can finish the job |
+| **Safety first:** a swollen battery, smoke, burning smell or liquid while charging makes the agent advise stopping use and flags `needsReview` | A hazard matters more than a complete form |
+| **Consent line:** the call opens with a note that it is processed as text; raw audio is never stored | Privacy by default |
+| **Service centres are a fictional list** ("… Demo Repair Centre") | No real business is impersonated |
+| A customer **who never calls** still gets the chat: after 2 minutes without a call it starts with a message and the first card | The chat alone must be able to finish a claim |
+| **Retention:** data is kept until a review period ends, then should be purged | No purge script is built yet (see [limits](#reliability-and-limits)) |
+
+## Stack and cost
 
 <!-- stack-section:start -->
-Server-side cascaded pipeline: it gives full control of interruption and transcript truncation, and keeps every key off the browser. Deepgram Nova-3 streams speech to text; Groq `openai/gpt-oss-20b` decides (fallbacks: gpt-oss-120b, then Gemini); Deepgram Aura-2 speaks. Node 22, Fastify and WebSockets run on one Render free web service beside Neon Postgres, which holds all state, files and the delivery outbox. The browser is the starter UI. Every provider is on a free tier, so actual spend is $0. Cost per session is reported as a list-price equivalent from a usage ledger priced at each provider's published rates. **Measured cost per completed session: `PENDING`. It must come from the deployed system, and none exists yet.** Method and prices are under Cost and latency.
+A server-side cascaded pipeline, chosen for full control of interruption and transcript truncation, and to keep every key off the browser. Deepgram Nova-3 transcribes, Groq's `openai/gpt-oss-20b` decides (falling back to gpt-oss-120b, then Gemini), and Deepgram Aura-2 speaks. Node 22, Fastify and WebSockets run on one Render free web service beside Neon Postgres, which holds all state, files and the delivery outbox. The UI is the starter's. Every provider is on a free tier, so real spend is $0; cost per session is reported as a list-price equivalent from a usage ledger priced at each provider's published rates. **Measured cost per completed session: `PENDING` until real sessions on the deployed system are measured.** Method and prices are under [Performance](#performance).
 <!-- stack-section:end -->
 
-## Product decisions where the brief was vague
+## Performance
 
-- **Scenario:** a device repair claim, with the call/chat split above and two optional fields (`additionalPhotos`, `additionalNotes`, offered once near the end and skippable).
-- **One page, one session:** the call and the chat share the starter's single page; the same session link works in a second tab and both get every broadcast.
-- **Completion needs an explicit confirmation card in chat.** A spoken "yes" is not enough: the business receives a confirmed record, and a misheard word cannot submit it.
-- **Identifiers must be typed.** A spoken serial number or email is saved as `unverified` and the agent asks the user to type it.
-- **Stop button:** the chat has no free-text field, so a header **Stop** opens a confirmation card; only Yes opts out.
-- **Silence:** the agent re-prompts at 8 s; after two re-prompts the call ends and the chat continues.
-- **Safety:** a hazard (battery swelling, smoke, burning smell) makes the agent advise stopping use of the device and flags `needsReview`.
-- **Consent line:** the call opens with a short note that it is processed as text; raw audio is never stored.
-- **Service centres are a fictional list** ("… Demo Repair Centre"), so no real business is impersonated.
-- **A user who never calls** still gets the chat: after 2 minutes without a call the chat starts with a message and the first card.
-- **Data is kept** until the review period ends, then should be purged. *No purge script is built yet (see Edge cases).*
+<!-- measured:start -->
+> **`PENDING`: no measurement from real sessions exists yet.** The tooling is built and tested (`server/scripts/report.ts`), but a report needs at least 10 completed real sessions and at least 50 voice turns. No cost or latency figure is claimed until it has run on the deployed system.
+<!-- measured:end -->
 
-## Edge cases
-
-**Handled** (each has an automated test; scenario tests drive a real server through both sockets with fake providers):
-- A card answered while the call is on, and the agent acknowledging it; a rejected or cancelled card reaching the call.
-- The call dropping at any point, then finishing in chat; a returning call that knows what was collected and the last question asked.
-- Invalid answers (three attempts, then no more asking and a review flag); a duplicate submit; a stale card answered after it was cancelled.
-- The same answer from both channels (agreement) and different answers (resolved by policy and recorded).
-- A reload mid-session, a second tab, a chat reconnect without a reload (no duplicate thread items, the open card reconciled).
-- A server restart with a live call and a card open; a record that must not be produced or delivered twice; delivery retries; an outbox row left leased by a dead worker.
-- An idle `partial` user returning to finish (revision 2, revision 1 untouched); opt-out by call and by chat, and a resume offer afterwards.
-- Uploads: a renamed `.exe`, an empty file, a file over 10 MB, a forged select value, a tampered or expired file link.
-- Provider failures: the model rate-limited or down (next model, then Gemini), STT dropping (one reconnect, then the call ends and chat continues), TTS errors, an exhausted free-tier quota (voice politely refused, chat still works).
-- Abuse: foreign Origin, oversized or malformed frames, floods of messages, many new sessions from one IP, concurrent calls beyond the cap.
-
-**Known not to be handled** (or handled only partly):
-- **No "which is correct?" card for an identifier conflict.** The resolver detects it and marks it unresolved, so today it ends in `needsReview` (R-2) without asking the user.
-- **A typed edit of a narrative field** (problem, start date, urgency) on the edit card is not offered, because the spoken account wins by policy.
-- **English only.** The date resolver has no festival names ("around Diwali" is re-asked) and no "last year". Aura-2 has no Indian-accent voice.
-- **An opted-out user** is offered "Resume your claim?" only when they try to call again; chat has no other control for it.
-- **A silent session with no activity at all** never finalizes (only the no-call timer runs).
-- **Cold start:** the free Render instance sleeps when idle (about a minute to wake), and the first call after a long quiet period can start slowly. There is deliberately no keep-alive monitor.
-- **Single instance:** the rate limiter, the call cap and the quota override live in process memory. Two instances during a deploy overlap stay consistent for session data (row locks, `SKIP LOCKED`), but not for these limits.
-- **Free-tier ceilings:** the Groq limit (8,000 tokens a minute per model) caps concurrent calls at 1 by default; Neon's 1 GB and 100 compute-hours bound the data and the always-on time.
-- **The call's live state does not survive a restart:** the call ends and the user taps Call again (a new call resumes from state; no automatic redial).
-- **Vision checks of uploads, other languages, the debug view and the post-review data purge** are not built.
-
-## What I trust least
-
-1. **The model's choices on a real call.** The server's handling of tool calls is tested with scripted models, and I have run full sessions by hand on the deployed site with the real providers, but the agent's behaviour is not covered by automated tests: whether it asks for chat cards at good moments, and whether the deployed check's acknowledgement patterns match what it really says, are only checked by hand. This is the least tested part.
-2. **Barge-in latency from the reviewer's network.** The stop-after-speech-onset budget (1.0 s) was measured at 1.40–1.48 s from India in the spike, because Deepgram detects words late from there. It may fail on the deployed check.
-3. **The free tiers themselves.** Their limits are not guaranteed, and a provider outage or quota end degrades the call to chat-only (by design, but a worse demo).
-4. **The browser latency probe.** Its thresholds are untested guesses; the number is secondary and noisy with speakers.
-5. **The free Render instance:** it sleeps when idle, and its restart behaviour and proxy headers (client IP) rely on Render's free-tier terms, which can change.
-
-## Cost and latency
-
-> **`PENDING`: no measurement from the deployed system exists.** The tooling is built and tested (`server/scripts/report.ts`, below), but a report needs the deployment, at least 10 completed real sessions and at least 50 voice turns. No cost or latency figure is claimed here.
+### Cost
 
 **How cost is worked out.** Every billable unit is a row in a usage ledger, priced when inserted at the provider's published paid list price (`server/src/metrics/prices.ts`, each entry with its source URL and the date it was read, 2026-11-10). Actual spend is **$0** because every provider is on a free tier; the reported figure is the **list-price equivalent**:
 
@@ -193,32 +226,66 @@ Server-side cascaded pipeline: it gives full control of interruption and transcr
 
 Assumptions that move the number: Groq lists no cached-input rate, so cached tokens are priced at the input rate (an upper bound); Google does not publish which model the `-latest` alias points to. A session's cost is the exact sum of its ledger rows and is written into its record (`costUsd`, with `costBreakdownUsd`).
 
+### Latency
+
 **How latency is measured.** The primary number is **server-side**: from the STT end-of-utterance event (Deepgram `speech_final`) to the first TTS audio frame written to the socket, for every agent reply that follows a user utterance, with stage timings beside it (the merge wait, the model's first token, TTS's first byte). A secondary, noisy **browser-side** number (mic level below a threshold for 300 ms after speech, to the first agent audio scheduled to play) is reported separately. Percentiles are nearest rank, so every p50 and p95 is an observed value. The report states n, the dates, the region, the browsers and whether headphones were worn.
 
 **What exists today** (a spike, not a measurement of this system): a laptop on home Wi-Fi in India, 20 runs of the same pipeline per variant, speech end to first audio byte, measured against the providers directly: **1,656 ms p50 / 1,768 ms p95** with the acknowledge-then-ask design, versus 2,311 / 2,513 ms when waiting for the model's follow-up speech. These include two round trips from the laptop to Deepgram that the deployed server will not have; the spike's own conservative estimate for the deployed system is about 1.3–1.4 s p50. **That estimate is not a measurement.**
 
 To produce the real numbers once deployed: run the sessions, then `DATABASE_URL=<Neon URL> npm run report -w server -- --region "…" --browsers "…" --headphones yes` (see `server/scripts/report.ts`). It reads the database in a read-only transaction.
 
-## What I would do with another week
+## Reliability and limits
+
+### Handled
+
+Each of these has an automated test; the scenario tests drive a real server through both sockets with fake providers.
+
+
+- A card answered while the call is on, and the agent acknowledging it; a rejected or cancelled card reaching the call.
+- The call dropping at any point, then finishing in chat; a returning call that knows what was collected and the last question asked.
+- Invalid answers (three attempts, then no more asking and a review flag); a duplicate submit; a stale card answered after it was cancelled.
+- The same answer from both channels (agreement) and different answers (resolved by policy and recorded).
+- A reload mid-session, a second tab, a chat reconnect without a reload (no duplicate thread items, the open card reconciled).
+- A server restart with a live call and a card open; a record that must not be produced or delivered twice; delivery retries; an outbox row left leased by a dead worker.
+- An idle `partial` user returning to finish (revision 2, revision 1 untouched); opt-out by call and by chat, and a resume offer afterwards.
+- Uploads: a renamed `.exe`, an empty file, a file over 10 MB, a forged select value, a tampered or expired file link.
+- Provider failures: the model rate-limited or down (next model, then Gemini), STT dropping (one reconnect, then the call ends and chat continues), TTS errors, an exhausted free-tier quota (voice politely refused, chat still works).
+- Abuse: foreign Origin, oversized or malformed frames, floods of messages, many new sessions from one IP, concurrent calls beyond the cap.
+
+### Known gaps
+
+- **No "which is correct?" card for an identifier conflict.** The resolver detects it and marks it unresolved, so today it ends in `needsReview` (R-2) without asking the user.
+- **A typed edit of a narrative field** (problem, start date, urgency) on the edit card is not offered, because the spoken account wins by policy.
+- **English only.** The date resolver has no festival names ("around Diwali" is re-asked) and no "last year". Aura-2 has no Indian-accent voice.
+- **An opted-out user** is offered "Resume your claim?" only when they try to call again; chat has no other control for it.
+- **A silent session with no activity at all** never finalizes (only the no-call timer runs).
+- **Cold start:** the free Render instance sleeps when idle (about a minute to wake), and the first call after a long quiet period can start slowly. There is deliberately no keep-alive monitor.
+- **Single instance:** the rate limiter, the call cap and the quota override live in process memory. Two instances during a deploy overlap stay consistent for session data (row locks, `SKIP LOCKED`), but not for these limits.
+- **Free-tier ceilings:** the Groq limit (8,000 tokens a minute per model) caps concurrent calls at 1 by default; Neon's 1 GB and 100 compute-hours bound the data and the always-on time.
+- **The call's live state does not survive a restart:** the call ends and the user taps Call again (a new call resumes from state; no automatic redial).
+- **Vision checks of uploads, other languages, the debug view and the post-review data purge** are not built.
+
+### What I trust least
+
+1. **The model's choices on a real call.** Tool handling, grounding, the speech filter and the turn rules are covered by tests built from real failing sessions, but the model itself is a free-tier 20B model: whether it asks for cards at good moments and how it phrases things are only checked by hand. The one-question rule also trades expressiveness for predictability, and could cut a reply that legitimately had two parts.
+2. **Barge-in latency from the reviewer's network.** The stop-after-speech-onset budget (1.0 s) measured 1.40–1.48 s from India in the spike, because Deepgram detects words late from there. It may miss on the deployed check.
+3. **The free tiers themselves.** Their limits are not guaranteed, and an outage or a spent quota degrades the call to chat-only (by design, but a worse demo).
+4. **The browser latency probe.** Its thresholds are untested guesses, and the number is noisy with speakers.
+5. **The free Render instance:** it sleeps when idle, and its restart behaviour and proxy headers (client IP) rely on free-tier terms that can change.
+
+## Roadmap
+
+With another week:
 
 - Build the missing **identifier-conflict card** and let a typed edit change a narrative field.
-- Run the deployed checks for real: the E2E script twice, a restart under a live call, two phones, and tune barge-in and endpointing against the measured numbers.
+- Run the deployed checks for real (the E2E script twice, a restart under a live call, two phones) and tune barge-in and endpointing against the measured numbers.
+- Move to **fixed question wording** for the common path, with the model used for extraction and exceptions only, to remove the remaining model-written speech.
 - A call **auto-redial** after a drop, and **Hindi** plus one more Indian language (needs an STT/TTS pairing with Indian voices).
 - **Vision check** of the invoice and photos (review rule R-4 is reserved for it).
-- A `/debug/:sessionId` timeline page on top of the existing `GET /api/sessions/:id/timeline`.
+- A `/debug/:sessionId` timeline page on top of `GET /api/sessions/:id/timeline`.
 - Move the in-memory limits to the database so more than one instance behaves identically, and raise the call cap after measuring Groq 429s.
 
-## AI tools
-
-Claude Code (Anthropic) wrote most of the code and tests under my direction, and drafted the plan, the decision log and this README from them. **Where it helped:** writing the many small, exact pieces (validators, the resolver, the outcome machine, the protocol schemas, test scaffolding) and finding gaps by reviewing its own work against the plan. **Where it misled, caught by tests or review rather than by trusting it:**
-- A rule for 3 failed attempts ignored fields that were only *heard* on the call, so a spoken serial typed wrongly three times ended `partial` with no review flag (found in an audit of the outcome rules, fixed with a test).
-- After a chat reconnect without a reload, a card could stay open that another tab had answered (found reviewing the replay, fixed).
-- It treated "audio sent" as "audio heard", which broke barge-in and silence timing because Aura-2 streams faster than real time (found in a real call, fixed to follow playback).
-- A first network-latency script reported a figure that was off by about 5x (a proxy and an IPv6 fallback) and was nearly used in a decision; it was caught as implausible and the script fixed.
-- It assumed what Gemini's `-latest` alias points to and that Groq has a cached-token rate; both are now stated as assumptions next to the prices.
-- A scenario test for the identifier-conflict card could not pass because nothing implements that card; the plan had listed the scenario without a task to build it.
-
-## Run it locally
+## Getting started
 
 Needs **Node 22.18+** (`.nvmrc`), **npm**, and a **Postgres** database (a free Neon database, or local Postgres 18). Provider keys are only needed for voice; without them the chat, cards, records and the API work, and a call is refused.
 
@@ -242,7 +309,7 @@ Migrations run when the server boots. Everything else has a default; see `server
 
 **Check the API** (the examples in this README, run against a server): `scripts/check-api-examples.sh http://localhost:8080`.
 
-**Tests**
+### Tests
 
 ```bash
 npm run lint && npm run typecheck
@@ -252,9 +319,15 @@ npm run e2e              # Playwright (Chromium) against the built app with fake
 ```
 `npm test` needs a disposable Postgres: set `TEST_DATABASE_URL`, or install Postgres 18 (for example `brew install postgresql@18`) and it starts a temporary cluster itself. Tests never touch your real database. Tests use **fake STT, LLM and TTS**; they prove the server's logic, not that a provider works. Opt-in tests against the real providers and a deployed check (`server/test/deployed/e2e.ts`) exist and spend free-tier quota, so they are run deliberately.
 
-**Layout:** `shared/` (the wire protocol, zod schemas, the record JSON Schema) · `server/` (`src/domain` pure logic, `src/session` commands and state, `src/voice` and `src/agent` the call, `src/ws` and `src/http` transport, `src/delivery` outbox, `src/metrics` ledger) · `web/` (the starter UI with small additions) · `e2e/` (Playwright) · `scripts/` (secret scans, API check) · `render.yaml` (the deployment blueprint).
+### Project layout
 
-## Security controls
+The repository is an npm workspace: `shared/` (the wire protocol, zod schemas, the record JSON Schema) · `server/` (`src/domain` pure logic, `src/session` commands and state, `src/voice` and `src/agent` the call, `src/ws` and `src/http` transport, `src/delivery` outbox, `src/metrics` ledger) · `web/` (the starter UI with small additions) · `e2e/` (Playwright) · `scripts/` (secret scans, API check) · `render.yaml` (the deployment blueprint).
+
+### Deployment
+
+`render.yaml` is a Render Blueprint for one free web service in Virginia, next to Neon (AWS us-east-1). Secrets are entered in the Render dashboard or generated by Render; none are in the file. A commit deploys only after its CI run (lint, typecheck, tests, build, gitleaks) passes (`autoDeployTrigger: checksPass`), migrations run before the server binds its port, and `/healthz` is the health check because it never touches the database.
+
+## Security
 
 - **No secret ever reaches the browser or the repository.** The browser talks only to this server; every provider call is made server-side with keys from environment variables (host secrets in production). `.env*` is gitignored; CI runs gitleaks over the full history and a check that the built web bundle contains no key, token, connection string or secret variable name; a plant-and-detect step proves the scanners can fail.
 - **Origin check** on both WebSockets (stops other sites using this server as a free voice agent); size limits (`/chat` 64 KB, `/call` 4 KB with mic frames exactly 640 bytes); every inbound payload validated with zod; select values checked against the server's list.
@@ -264,11 +337,10 @@ npm run e2e              # Playwright (Chromium) against the built app with fake
 - **Security headers** on every response (a strict CSP with `default-src 'none'`, `frame-ancestors 'none'`, a microphone-only Permissions-Policy, HSTS on https).
 - **Privacy:** the session id is a capability link, so anyone holding it can read that session; some free tiers may use request data to improve their services, so **use made-up data only**. Raw audio is not stored.
 
-## JSON Schema
+## API reference
 
 [`shared/record.schema.json`](shared/record.schema.json) is the canonical schema of the record (draft 2020-12). The server validates every record against it before it is stored, and the receiving stub validates again before accepting a delivery.
 
-## API reference
 
 The page talks to the server over the two WebSockets and one upload endpoint. The rest is for inspecting sessions and for tests. A session id is a UUIDv4; knowing it is the permission to read the session, so these routes need no token (they are rate-limited per IP). Errors are JSON. Replace `$BASE` with `http://localhost:8080` or the public URL, `https://device-repair-agent.onrender.com`. [`scripts/check-api-examples.sh`](scripts/check-api-examples.sh) runs every example below and fails if a status or a body differs from this table, or if this README stops documenting one of the endpoints.
 
@@ -319,3 +391,16 @@ curl -s -H "Authorization: Bearer $TEST_API_TOKEN" $BASE/hooks/records          
 ```
 
 A WebSocket from any Origin other than the site's own is answered with a `closing` message (close code 4403), which `curl` shows after the 101 upgrade. The wire messages, close codes and limits of both sockets are typed in `shared/protocol/` (zod schemas in `schemas.ts`).
+
+## Built with AI
+
+Claude Code (Anthropic) wrote most of the code and tests under my direction, and drafted the plan, the decision log and this README from them. **Where it helped:** the many small, exact pieces (validators, the resolver, the outcome machine, the protocol schemas, test scaffolding) and finding gaps by reviewing its own work against the plan. **Where it misled**, caught by tests, review or live calls rather than by trusting it:
+
+- A rule for 3 failed attempts ignored fields that were only *heard* on the call, so a spoken serial typed wrongly three times ended `partial` with no review flag (found in an audit of the outcome rules, fixed with a test).
+- After a chat reconnect without a reload, a card could stay open that another tab had answered (found reviewing the replay, fixed).
+- It treated "audio sent" as "audio heard", which broke barge-in and silence timing because Aura-2 streams faster than real time (found in a real call, fixed to follow playback).
+- A first network-latency script reported a figure that was off by about 5x (a proxy and an IPv6 fallback) and was nearly used in a decision; it was caught as implausible and the script fixed.
+- It assumed what Gemini's `-latest` alias points to and that Groq has a cached-token rate; both are now stated as assumptions next to the prices.
+- A scenario test for the identifier-conflict card could not pass because nothing implements that card; the plan had listed the scenario without a task to build it.
+- It wrote prompt rules ("one question at a time", "no markdown", "never invent a value") that the deployed model then ignored. Recorded live sessions showed repeated questions, invented customer replies and a voice reading "star star yes", so those rules are now enforced in code (see [Keeping the model honest](#keeping-the-model-honest)).
+- A transcript that was correct in order but showed each reply long before the voice reached it passed every automated test; only a live call exposed it, and the transcript now follows playback.
