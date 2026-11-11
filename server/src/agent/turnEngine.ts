@@ -24,6 +24,8 @@ export interface ToolOutcome {
   ok: boolean;
   /** A short templated acknowledgement of a validated result ("Got it, Samsung Galaxy S23."). */
   ack?: string;
+  /** A rejection the customer needs no reaction to (a made-up value refused): never worth a follow-up that speaks again. */
+  quiet?: boolean;
   /** The call ends after this turn's speech (end_call, opt-out). */
   endCall?: boolean;
 }
@@ -87,13 +89,17 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
   let lastAck = "";
   /** The acknowledgement the previous round spoke: a follow-up that starts by repeating it has that part dropped. */
   let justSaid = "";
+  /** A stream that broke mid-way gets one more round, told where it was cut off (a dead line is worse than a retry). */
+  let retriedBreak = false;
+  let hint: LlmMessage | null = null;
 
   for (let round = 0; round < MAX_ROUNDS; round++) {
     if (input.signal?.aborted) {
       out.aborted = true;
       break;
     }
-    const messages = [...input.history, ...out.messages, await input.state()];
+    const messages = [...input.history, ...out.messages, ...(hint ? [hint] : []), await input.state()];
+    hint = null;
     let stream: Awaited<ReturnType<LlmClient["stream"]>>;
     try {
       stream = await deps.llm.stream({
@@ -129,6 +135,7 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
     let text = "";
     const calls: ChatToolCall[] = [];
     let finishReason: string | null = null;
+    let broke = false;
     // Held back while it could still be a repeat of `justSaid` (real gpt-oss-20b runs did repeat it despite the prompt).
     let held = justSaid ? "" : null;
     // Prompt markup, invisible characters and runaway filler never reach the speaker (speechFilter.ts).
@@ -171,7 +178,8 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
         else if (chunk.type === "done") finishReason = chunk.finishReason;
       }
     } catch {
-      // A stream that broke mid-way: keep what was said; the turn ends.
+      // A stream that broke mid-way: keep what was said (a retry below), never leave the line silent.
+      broke = true;
       out.failed = out.spoken === "" && text === "";
     }
     release(true);
@@ -183,6 +191,15 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
       out.aborted = true;
       if (text || calls.length) out.messages.push({ role: "assistant", content: text || null });
       break;
+    }
+    if (broke && calls.length === 0 && !retriedBreak) {
+      retriedBreak = true;
+      out.failed = false;
+      if (text.trim()) {
+        out.messages.push({ role: "assistant", content: text });
+        hint = { role: "system", content: `Your last reply was cut off after "${text.trim().slice(-80)}". Finish it in one short sentence, without repeating what you already said.` };
+      }
+      continue;
     }
     if (finishReason === "content_filter" && !text && calls.length === 0) out.refused = true;
 
@@ -228,7 +245,8 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
       out.endCall = true;
       break;
     }
-    const needFollowUp = !text.trim() || outcomes.some((o) => !o.ok);
+    // Spoken already and only a quiet rejection (a refused made-up value): no second round that asks again.
+    const needFollowUp = !text.trim() || outcomes.some((o) => !o.ok && !o.quiet);
     if (!needFollowUp) break;
   }
   return out;

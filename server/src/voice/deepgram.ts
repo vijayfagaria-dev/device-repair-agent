@@ -17,6 +17,9 @@ export interface DeepgramSttOptions {
   connectTimeoutMs?: number;
 }
 
+/** Nova-3 keyterm prompting: the words a repair call is about, so "Riya" is not heard as "Reuters" and "cracked" as "correct". */
+export const KEYTERMS = ["Riya", "smartphone", "laptop", "tablet", "smartwatch", "headphones", "iPhone", "Samsung Galaxy", "OnePlus", "Redmi", "Realme", "MacBook", "Dell XPS", "cracked", "screen", "touch", "battery", "charging", "IMEI", "serial number"] as const;
+
 export function deepgramListenUrl(base: string, endpointingMs: number): string {
   const params = new URLSearchParams({
     model: "nova-3-general",
@@ -31,6 +34,7 @@ export function deepgramListenUrl(base: string, endpointingMs: number): string {
     smart_format: "true",
     punctuate: "true",
   });
+  for (const term of KEYTERMS) params.append("keyterm", term);
   return `${base}?${params}`;
 }
 

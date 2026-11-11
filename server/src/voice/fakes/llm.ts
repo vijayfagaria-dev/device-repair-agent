@@ -13,6 +13,8 @@ export interface LlmScript {
   pieceChars?: number;
   /** Wait for this promise before yielding each chunk (lets tests interleave). */
   gate?: () => Promise<void>;
+  /** The stream throws after this many chunks (a connection that dies mid-reply, as on the live call of 2026-11-11). */
+  breakAfter?: number;
   /** The first route failed and this one answered: onFallback is called first, as the real router does. */
   fellBack?: boolean;
 }
@@ -56,7 +58,9 @@ export class FakeLlm implements LlmClient {
       route: script.route ?? DEFAULT_ROUTE,
       ttftMs: 120,
       async *[Symbol.asyncIterator]() {
+        let sent = 0;
         for (const chunk of chunks) {
+          if (script.breakAfter !== undefined && sent++ >= script.breakAfter) throw new LlmError("stream broke", null);
           if (script.gate) await script.gate();
           if (signal?.aborted) return;
           yield chunk;

@@ -156,4 +156,41 @@ describe("no double acknowledgement (seen in a real gpt-oss-20b call)", () => {
     const out = await t.go();
     expect(out.spoken).toBe("Got it. Got itchy fingers? Which model is it?");
   });
+
+  // Live session ed7ce483 (2026-11-11): the reply broke after "When did" and the call sat silent until the user left.
+  it("a stream that breaks mid-sentence gets one more round, told where it was cut off", async () => {
+    const t = setup();
+    t.llm.enqueue({ text: "I'm sorry to hear that. When did", pieceChars: 8, breakAfter: 3 }, { text: "the screen crack?" });
+    const out = await t.go();
+    expect(t.llm.requests).toHaveLength(2);
+    const hint = t.llm.requests[1]?.messages.find((m) => m.role === "system" && String(m.content).includes("cut off"));
+    expect(hint).toBeDefined();
+    expect(out.failed).toBe(false);
+    expect(out.spoken).toContain("the screen crack?");
+  });
+
+  it("a stream that breaks twice stops after one retry and the call carries on", async () => {
+    const t = setup();
+    t.llm.enqueue({ text: "When did it start", pieceChars: 4, breakAfter: 2 }, { text: "Sorry, one more", pieceChars: 4, breakAfter: 1 });
+    const out = await t.go();
+    expect(t.llm.requests).toHaveLength(2);
+    expect(out.aborted).toBe(false);
+  });
+
+  // Same session: the model asked for the brand and model three times in one turn, because a failed tool call after it
+  // had already spoken started another round that spoke again.
+  it("a quiet rejection after the model already spoke does not start a second round that asks again", async () => {
+    const t = setup(() => ({ result: { status: "rejected" }, ok: false, quiet: true }));
+    t.llm.enqueue({ text: "What's the brand and model?", toolCalls: [save("deviceModel", "x")] }, { text: "Could you tell me the brand and model?" });
+    const out = await t.go();
+    expect(t.llm.requests).toHaveLength(1);
+    expect(out.spoken).toBe("What's the brand and model?");
+  });
+
+  it("a real invalid value still gets a follow-up so the agent can react", async () => {
+    const t = setup(() => ({ result: { status: "invalid", error: "which date?" }, ok: false }));
+    t.llm.enqueue({ text: "Thanks.", toolCalls: [save("problemStartedAt", "soon")] }, { text: "Roughly which date was that?" });
+    await t.go();
+    expect(t.llm.requests).toHaveLength(2);
+  });
 });

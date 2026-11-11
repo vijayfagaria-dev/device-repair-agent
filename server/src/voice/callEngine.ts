@@ -471,7 +471,7 @@ export class CallEngine {
         // Only what the customer really said (agent/grounding.ts): a made-up value never reaches the session.
         const said = this.#history.filter((m): m is Extract<LlmMessage, { role: "user" }> => m.role === "user").map((m) => m.content);
         const ungrounded = groundingError(call.args.spoken_evidence, said);
-        if (ungrounded) return { result: { status: "rejected", error: ungrounded }, ok: false };
+        if (ungrounded) return { result: { status: "rejected", error: ungrounded }, ok: false, quiet: true };
         const reply = await port.dispatch<SaveSpokenFieldReply>({ type: "SaveSpokenField", field: call.args.field, value: call.args.value, evidence: call.args.spoken_evidence, userConfirmed: call.args.user_confirmed });
         const field = call.args.field as RecordFieldId;
         if (reply?.status === "valid") return { result: { status: "valid" }, ok: true, ack: savedAck(field, reply.normalized) };
