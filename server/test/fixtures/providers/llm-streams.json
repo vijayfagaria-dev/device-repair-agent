@@ -1,0 +1,756 @@
+{
+ "capturedOn": "2026-11-10",
+ "promptPrefixHash": "ac513a7a0f1466332bc9e33ef8438be01e281e27c786a2093f1a0377a595e710",
+ "source": "real streams through agent/llm.ts (P5-T01 capture); response ids removed",
+ "groq": {
+  "turn": {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "ttftMs": 1398,
+   "totalMs": 1409,
+   "raw": [
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300540,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "role": "assistant",
+        "content": ""
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": "Need",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": " to",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": " save",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": " device",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": "Type",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": ",",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": " device",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": "Model",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": ",",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": " problem",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": "Description",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": ".",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": " Ask",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": " problem",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": "Started",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": "At",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": ".",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "tool_calls": [
+         {
+          "id": "fc_a4b94269-5840-4733-8daf-f6c1363e8a43",
+          "type": "function",
+          "function": {
+           "name": "save_field",
+           "arguments": "{\"field\":\"deviceType\",\"spoken_evidence\":\"It's my Samsung Galaxy S23, the screen keeps flickering and going black.\",\"user_confirmed\":true,\"value\":\"smartphone\"}"
+          },
+          "index": 0
+         }
+        ]
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {},
+       "logprobs": null,
+       "finish_reason": "tool_calls"
+      }
+     ],
+     "usage": {
+      "queue_time": 0.364892666,
+      "prompt_tokens": 1613,
+      "prompt_time": 0.575538474,
+      "completion_tokens": 73,
+      "completion_time": 0.079745114,
+      "total_tokens": 1686,
+      "total_time": 0.655283588,
+      "prompt_tokens_details": {
+       "cached_tokens": 1536
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 18
+      }
+     }
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [],
+     "usage": {
+      "queue_time": 0.364892666,
+      "prompt_tokens": 1613,
+      "prompt_time": 0.575538474,
+      "completion_tokens": 73,
+      "completion_time": 0.079745114,
+      "total_tokens": 1686,
+      "total_time": 0.655283588,
+      "prompt_tokens_details": {
+       "cached_tokens": 1536
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 18
+      }
+     },
+     "service_tier": "on_demand"
+    }
+   ]
+  },
+  "followUp": {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "ttftMs": 1108,
+   "totalMs": 1110,
+   "raw": [
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300541,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "role": "assistant",
+        "content": ""
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300542,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": "Need",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300542,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": " device",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300542,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": "Model",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300542,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "reasoning": ".",
+        "channel": "analysis"
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300542,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {
+        "tool_calls": [
+         {
+          "id": "fc_3e2dd23f-cf37-4fec-9055-5aa7b1979a51",
+          "type": "function",
+          "function": {
+           "name": "save_field",
+           "arguments": "{\"field\":\"deviceModel\",\"spoken_evidence\":\"It's my Samsung Galaxy S23, the screen keeps flickering and going black.\",\"user_confirmed\":true,\"value\":\"Samsung Galaxy S23\"}"
+          },
+          "index": 0
+         }
+        ]
+       },
+       "logprobs": null,
+       "finish_reason": null
+      }
+     ]
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300542,
+     "model": "openai/gpt-oss-20b",
+     "choices": [
+      {
+       "index": 0,
+       "delta": {},
+       "logprobs": null,
+       "finish_reason": "tool_calls"
+      }
+     ],
+     "usage": {
+      "queue_time": 0.359687227,
+      "prompt_tokens": 1675,
+      "prompt_time": 0.357430655,
+      "completion_tokens": 59,
+      "completion_time": 0.076670382,
+      "total_tokens": 1734,
+      "total_time": 0.434101037,
+      "prompt_tokens_details": {
+       "cached_tokens": 768
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 5
+      }
+     }
+    },
+    {
+     "object": "chat.completion.chunk",
+     "created": 1794300542,
+     "model": "openai/gpt-oss-20b",
+     "choices": [],
+     "usage": {
+      "queue_time": 0.359687227,
+      "prompt_tokens": 1675,
+      "prompt_time": 0.357430655,
+      "completion_tokens": 59,
+      "completion_time": 0.076670382,
+      "total_tokens": 1734,
+      "total_time": 0.434101037,
+      "prompt_tokens_details": {
+       "cached_tokens": 768
+      },
+      "completion_tokens_details": {
+       "reasoning_tokens": 5
+      }
+     },
+     "service_tier": "on_demand"
+    }
+   ]
+  },
+  "prefixPromptTokens": 1451
+ },
+ "gemini": {
+  "turn": {
+   "provider": "gemini",
+   "model": "gemini-flash-lite-latest",
+   "ttftMs": 4172,
+   "totalMs": 4328,
+   "raw": [
+    {
+     "choices": [
+      {
+       "delta": {
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "extra_content": {
+           "google": {
+            "thought_signature": "<redacted signature>"
+           }
+          },
+          "function": {
+           "arguments": "{\"field\":\"deviceType\",\"value\":\"Smartphone\",\"user_confirmed\":false,\"spoken_evidence\":\"Samsung Galaxy S23\"}",
+           "name": "save_field"
+          },
+          "id": "call_2979326713490081367",
+          "type": "function"
+         }
+        ]
+       },
+       "index": 0,
+       "finish_reason": null
+      }
+     ],
+     "created": 1794300546,
+     "model": "gemini-flash-lite-latest",
+     "object": "chat.completion.chunk",
+     "usage": {
+      "completion_tokens": 41,
+      "prompt_tokens": 716,
+      "total_tokens": 757
+     }
+    },
+    {
+     "choices": [
+      {
+       "delta": {
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"field\":\"deviceModel\",\"value\":\"Samsung Galaxy S23\",\"spoken_evidence\":\"Samsung Galaxy S23\",\"user_confirmed\":false}",
+           "name": "save_field"
+          },
+          "id": "call_2979326713490080386",
+          "type": "function"
+         }
+        ]
+       },
+       "index": 0,
+       "finish_reason": null
+      }
+     ],
+     "created": 1794300547,
+     "model": "gemini-flash-lite-latest",
+     "object": "chat.completion.chunk",
+     "usage": {
+      "completion_tokens": 86,
+      "prompt_tokens": 716,
+      "total_tokens": 802
+     }
+    },
+    {
+     "choices": [
+      {
+       "delta": {
+        "role": "assistant",
+        "tool_calls": [
+         {
+          "function": {
+           "arguments": "{\"value\":\"Screen keeps flickering and going black\",\"field\":\"problemDescription\",\"user_confirmed\":false,\"spoken_evidence\":\"the screen keeps flickering and going black\"}",
+           "name": "save_field"
+          },
+          "id": "call_2979326713490083501",
+          "type": "function"
+         }
+        ]
+       },
+       "index": 0,
+       "finish_reason": null
+      }
+     ],
+     "created": 1794300547,
+     "model": "gemini-flash-lite-latest",
+     "object": "chat.completion.chunk",
+     "usage": {
+      "completion_tokens": 134,
+      "prompt_tokens": 716,
+      "total_tokens": 850
+     }
+    },
+    {
+     "choices": [
+      {
+       "delta": {
+        "role": "assistant"
+       },
+       "finish_reason": "stop",
+       "index": 0
+      }
+     ],
+     "created": 1794300547,
+     "model": "gemini-flash-lite-latest",
+     "object": "chat.completion.chunk",
+     "usage": {
+      "completion_tokens": 134,
+      "prompt_tokens": 716,
+      "total_tokens": 850
+     }
+    }
+   ]
+  },
+  "followUp": {
+   "provider": "gemini",
+   "model": "gemini-flash-lite-latest",
+   "ttftMs": 2573,
+   "totalMs": 3290,
+   "raw": [
+    {
+     "choices": [
+      {
+       "delta": {
+        "content": "When",
+        "role": "assistant"
+       },
+       "index": 0,
+       "finish_reason": null
+      }
+     ],
+     "created": 1794300549,
+     "model": "gemini-flash-lite-latest",
+     "object": "chat.completion.chunk",
+     "usage": {
+      "completion_tokens": 1,
+      "prompt_tokens": 902,
+      "total_tokens": 903
+     }
+    },
+    {
+     "choices": [
+      {
+       "delta": {
+        "content": " did you first notice the screen flickering, and how urgent is it for you to",
+        "role": "assistant"
+       },
+       "index": 0,
+       "finish_reason": null
+      }
+     ],
+     "created": 1794300549,
+     "model": "gemini-flash-lite-latest",
+     "object": "chat.completion.chunk",
+     "usage": {
+      "completion_tokens": 17,
+      "prompt_tokens": 902,
+      "total_tokens": 919
+     }
+    },
+    {
+     "choices": [
+      {
+       "delta": {
+        "content": " get this repaired?",
+        "role": "assistant"
+       },
+       "index": 0,
+       "finish_reason": null
+      }
+     ],
+     "created": 1794300549,
+     "model": "gemini-flash-lite-latest",
+     "object": "chat.completion.chunk",
+     "usage": {
+      "completion_tokens": 21,
+      "prompt_tokens": 902,
+      "total_tokens": 923
+     }
+    },
+    {
+     "choices": [
+      {
+       "delta": {
+        "extra_content": {
+         "google": {
+          "thought_signature": "<redacted signature>"
+         }
+        },
+        "role": "assistant"
+       },
+       "finish_reason": "stop",
+       "index": 0
+      }
+     ],
+     "created": 1794300550,
+     "model": "gemini-flash-lite-latest",
+     "object": "chat.completion.chunk",
+     "usage": {
+      "completion_tokens": 21,
+      "prompt_tokens": 902,
+      "total_tokens": 923
+     }
+    }
+   ]
+  }
+ },
+ "note": "`raw` holds the SDK chunks as received; tests replay them through agent/llm.ts. Usage repeats within a stream (Groq twice, Gemini cumulatively). Captured with the greeting turn first, as in production."
+}
