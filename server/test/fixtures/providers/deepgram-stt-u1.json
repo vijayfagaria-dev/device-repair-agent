@@ -1,0 +1,585 @@
+{
+ "capturedOn": "2026-11-10",
+ "source": "Deepgram listen, P5-T01 capture of spike audio u1.wav",
+ "params": "model=nova-3-general&language=en&encoding=linear16&sample_rate=16000&channels=1&interim_results=true&endpointing=150&utterance_end_ms=1000&vad_events=true&smart_format=true&punctuate=true",
+ "closeCode": 1000,
+ "audioBytes": 139574,
+ "events": [
+  {
+   "atMs": 761,
+   "message": {
+    "type": "SpeechStarted",
+    "channel": [
+     0,
+     1
+    ],
+    "timestamp": 0.09
+   }
+  },
+  {
+   "atMs": 2368,
+   "message": {
+    "type": "Results",
+    "channel_index": [
+     0,
+     1
+    ],
+    "duration": 1,
+    "start": 0,
+    "is_final": false,
+    "speech_final": false,
+    "channel": {
+     "alternatives": [
+      {
+       "transcript": "Hi. My phone",
+       "confidence": 0.9970703,
+       "words": [
+        {
+         "word": "hi",
+         "start": 0,
+         "end": 0.48,
+         "confidence": 0.98706055,
+         "punctuated_word": "Hi."
+        },
+        {
+         "word": "my",
+         "start": 0.48,
+         "end": 0.79999995,
+         "confidence": 0.99902344,
+         "punctuated_word": "My"
+        },
+        {
+         "word": "phone",
+         "start": 0.79999995,
+         "end": 0.96,
+         "confidence": 0.9970703,
+         "punctuated_word": "phone"
+        }
+       ]
+      }
+     ]
+    },
+    "metadata": {
+     "model_info": {
+      "name": "general-nova-3",
+      "version": "2025-04-17.21547",
+      "arch": "nova-3"
+     }
+    },
+    "from_finalize": false
+   }
+  },
+  {
+   "atMs": 4614,
+   "message": {
+    "type": "Results",
+    "channel_index": [
+     0,
+     1
+    ],
+    "duration": 2,
+    "start": 0,
+    "is_final": false,
+    "speech_final": false,
+    "channel": {
+     "alternatives": [
+      {
+       "transcript": "Hi. My phone screen keeps",
+       "confidence": 1,
+       "words": [
+        {
+         "word": "hi",
+         "start": 0,
+         "end": 0.56,
+         "confidence": 0.99365234,
+         "punctuated_word": "Hi."
+        },
+        {
+         "word": "my",
+         "start": 0.56,
+         "end": 0.88,
+         "confidence": 1,
+         "punctuated_word": "My"
+        },
+        {
+         "word": "phone",
+         "start": 0.88,
+         "end": 1.12,
+         "confidence": 1,
+         "punctuated_word": "phone"
+        },
+        {
+         "word": "screen",
+         "start": 1.12,
+         "end": 1.4399999,
+         "confidence": 0.9707031,
+         "punctuated_word": "screen"
+        },
+        {
+         "word": "keeps",
+         "start": 1.4399999,
+         "end": 1.8399999,
+         "confidence": 1,
+         "punctuated_word": "keeps"
+        }
+       ]
+      }
+     ]
+    },
+    "metadata": {
+     "model_info": {
+      "name": "general-nova-3",
+      "version": "2025-04-17.21547",
+      "arch": "nova-3"
+     }
+    },
+    "from_finalize": false
+   }
+  },
+  {
+   "atMs": 6931,
+   "message": {
+    "type": "Results",
+    "channel_index": [
+     0,
+     1
+    ],
+    "duration": 3,
+    "start": 0,
+    "is_final": false,
+    "speech_final": false,
+    "channel": {
+     "alternatives": [
+      {
+       "transcript": "Hi. My phone screen keeps flickering and then it",
+       "confidence": 0.9996745,
+       "words": [
+        {
+         "word": "hi",
+         "start": 0,
+         "end": 0.56,
+         "confidence": 0.9951172,
+         "punctuated_word": "Hi."
+        },
+        {
+         "word": "my",
+         "start": 0.56,
+         "end": 0.88,
+         "confidence": 1,
+         "punctuated_word": "My"
+        },
+        {
+         "word": "phone",
+         "start": 0.88,
+         "end": 1.12,
+         "confidence": 1,
+         "punctuated_word": "phone"
+        },
+        {
+         "word": "screen",
+         "start": 1.12,
+         "end": 1.52,
+         "confidence": 0.9526367,
+         "punctuated_word": "screen"
+        },
+        {
+         "word": "keeps",
+         "start": 1.52,
+         "end": 1.92,
+         "confidence": 1,
+         "punctuated_word": "keeps"
+        },
+        {
+         "word": "flickering",
+         "start": 1.92,
+         "end": 2.3999999,
+         "confidence": 0.9996745,
+         "punctuated_word": "flickering"
+        },
+        {
+         "word": "and",
+         "start": 2.3999999,
+         "end": 2.6399999,
+         "confidence": 0.5957031,
+         "punctuated_word": "and"
+        },
+        {
+         "word": "then",
+         "start": 2.6399999,
+         "end": 2.8,
+         "confidence": 1,
+         "punctuated_word": "then"
+        },
+        {
+         "word": "it",
+         "start": 2.8,
+         "end": 2.96,
+         "confidence": 0.9921875,
+         "punctuated_word": "it"
+        }
+       ]
+      }
+     ]
+    },
+    "metadata": {
+     "model_info": {
+      "name": "general-nova-3",
+      "version": "2025-04-17.21547",
+      "arch": "nova-3"
+     }
+    },
+    "from_finalize": false
+   }
+  },
+  {
+   "atMs": 11789,
+   "message": {
+    "type": "Results",
+    "channel_index": [
+     0,
+     1
+    ],
+    "duration": 4,
+    "start": 0,
+    "is_final": false,
+    "speech_final": false,
+    "channel": {
+     "alternatives": [
+      {
+       "transcript": "Hi. My phone screen keeps flickering and then it goes completely",
+       "confidence": 1,
+       "words": [
+        {
+         "word": "hi",
+         "start": 0,
+         "end": 0.56,
+         "confidence": 0.9941406,
+         "punctuated_word": "Hi."
+        },
+        {
+         "word": "my",
+         "start": 0.56,
+         "end": 0.88,
+         "confidence": 1,
+         "punctuated_word": "My"
+        },
+        {
+         "word": "phone",
+         "start": 0.88,
+         "end": 1.12,
+         "confidence": 1,
+         "punctuated_word": "phone"
+        },
+        {
+         "word": "screen",
+         "start": 1.12,
+         "end": 1.52,
+         "confidence": 0.9614258,
+         "punctuated_word": "screen"
+        },
+        {
+         "word": "keeps",
+         "start": 1.52,
+         "end": 1.92,
+         "confidence": 1,
+         "punctuated_word": "keeps"
+        },
+        {
+         "word": "flickering",
+         "start": 1.92,
+         "end": 2.3999999,
+         "confidence": 0.9996745,
+         "punctuated_word": "flickering"
+        },
+        {
+         "word": "and",
+         "start": 2.3999999,
+         "end": 2.6399999,
+         "confidence": 0.625,
+         "punctuated_word": "and"
+        },
+        {
+         "word": "then",
+         "start": 2.6399999,
+         "end": 2.8799999,
+         "confidence": 1,
+         "punctuated_word": "then"
+        },
+        {
+         "word": "it",
+         "start": 2.8799999,
+         "end": 3.04,
+         "confidence": 0.99902344,
+         "punctuated_word": "it"
+        },
+        {
+         "word": "goes",
+         "start": 3.04,
+         "end": 3.28,
+         "confidence": 1,
+         "punctuated_word": "goes"
+        },
+        {
+         "word": "completely",
+         "start": 3.28,
+         "end": 3.76,
+         "confidence": 1,
+         "punctuated_word": "completely"
+        }
+       ]
+      }
+     ]
+    },
+    "metadata": {
+     "model_info": {
+      "name": "general-nova-3",
+      "version": "2025-04-17.21547",
+      "arch": "nova-3"
+     }
+    },
+    "from_finalize": false
+   }
+  },
+  {
+   "atMs": 12170,
+   "message": {
+    "type": "Results",
+    "channel_index": [
+     0,
+     1
+    ],
+    "duration": 4.55,
+    "start": 0,
+    "is_final": true,
+    "speech_final": true,
+    "channel": {
+     "alternatives": [
+      {
+       "transcript": "Hi. My phone screen keeps flickering and then it goes completely black.",
+       "confidence": 1,
+       "words": [
+        {
+         "word": "hi",
+         "start": 0,
+         "end": 0.56,
+         "confidence": 0.99316406,
+         "punctuated_word": "Hi."
+        },
+        {
+         "word": "my",
+         "start": 0.56,
+         "end": 0.88,
+         "confidence": 1,
+         "punctuated_word": "My"
+        },
+        {
+         "word": "phone",
+         "start": 0.88,
+         "end": 1.12,
+         "confidence": 1,
+         "punctuated_word": "phone"
+        },
+        {
+         "word": "screen",
+         "start": 1.12,
+         "end": 1.52,
+         "confidence": 0.93603516,
+         "punctuated_word": "screen"
+        },
+        {
+         "word": "keeps",
+         "start": 1.52,
+         "end": 1.92,
+         "confidence": 1,
+         "punctuated_word": "keeps"
+        },
+        {
+         "word": "flickering",
+         "start": 1.92,
+         "end": 2.3999999,
+         "confidence": 0.9996745,
+         "punctuated_word": "flickering"
+        },
+        {
+         "word": "and",
+         "start": 2.3999999,
+         "end": 2.6399999,
+         "confidence": 0.7163086,
+         "punctuated_word": "and"
+        },
+        {
+         "word": "then",
+         "start": 2.6399999,
+         "end": 2.8799999,
+         "confidence": 1,
+         "punctuated_word": "then"
+        },
+        {
+         "word": "it",
+         "start": 2.8799999,
+         "end": 3.04,
+         "confidence": 0.99902344,
+         "punctuated_word": "it"
+        },
+        {
+         "word": "goes",
+         "start": 3.04,
+         "end": 3.36,
+         "confidence": 1,
+         "punctuated_word": "goes"
+        },
+        {
+         "word": "completely",
+         "start": 3.36,
+         "end": 3.84,
+         "confidence": 1,
+         "punctuated_word": "completely"
+        },
+        {
+         "word": "black",
+         "start": 3.84,
+         "end": 4.24,
+         "confidence": 0.9885254,
+         "punctuated_word": "black."
+        }
+       ]
+      }
+     ]
+    },
+    "metadata": {
+     "model_info": {
+      "name": "general-nova-3",
+      "version": "2025-04-17.21547",
+      "arch": "nova-3"
+     }
+    },
+    "from_finalize": false
+   }
+  },
+  {
+   "atMs": 13241,
+   "message": {
+    "type": "Results",
+    "channel_index": [
+     0,
+     1
+    ],
+    "duration": 1.0116873,
+    "start": 4.55,
+    "is_final": false,
+    "speech_final": false,
+    "channel": {
+     "alternatives": [
+      {
+       "transcript": "",
+       "confidence": 0,
+       "words": []
+      }
+     ]
+    },
+    "metadata": {
+     "model_info": {
+      "name": "general-nova-3",
+      "version": "2025-04-17.21547",
+      "arch": "nova-3"
+     }
+    },
+    "from_finalize": false
+   }
+  },
+  {
+   "atMs": 13243,
+   "message": {
+    "type": "UtteranceEnd",
+    "channel": [
+     0,
+     1
+    ],
+    "last_word_end": 4.24
+   }
+  },
+  {
+   "atMs": 13401,
+   "message": {
+    "type": "Results",
+    "channel_index": [
+     0,
+     1
+    ],
+    "duration": 1.3116875,
+    "start": 4.55,
+    "is_final": true,
+    "speech_final": true,
+    "channel": {
+     "alternatives": [
+      {
+       "transcript": "",
+       "confidence": 0,
+       "words": []
+      }
+     ]
+    },
+    "metadata": {
+     "model_info": {
+      "name": "general-nova-3",
+      "version": "2025-04-17.21547",
+      "arch": "nova-3"
+     }
+    },
+    "from_finalize": false
+   }
+  },
+  {
+   "atMs": 13417,
+   "message": {
+    "type": "Results",
+    "channel_index": [
+     0,
+     1
+    ],
+    "duration": 0,
+    "start": 5.8616877,
+    "is_final": true,
+    "speech_final": true,
+    "channel": {
+     "alternatives": [
+      {
+       "transcript": "",
+       "confidence": 0,
+       "words": []
+      }
+     ]
+    },
+    "metadata": {
+     "model_info": {
+      "name": "general-nova-3",
+      "version": "2025-04-17.21547",
+      "arch": "nova-3"
+     }
+    },
+    "from_finalize": false
+   }
+  },
+  {
+   "atMs": 13423,
+   "message": {
+    "type": "Metadata",
+    "transaction_key": "deprecated",
+    "sha256": "4caebd00225f9054b99dd08de714f0ad9a9ddfdbb1cfdb5c98cf6c8a278b66b0",
+    "created": "2026-11-10T07:58:50.636Z",
+    "duration": 5.8616877,
+    "channels": 1,
+    "models": [
+     "40bd3654-e622-47c4-a111-63a61b23bfe8"
+    ],
+    "model_info": {
+     "40bd3654-e622-47c4-a111-63a61b23bfe8": {
+      "name": "general-nova-3",
+      "version": "2025-04-17.21547",
+      "arch": "nova-3"
+     }
+    }
+   }
+  }
+ ]
+}
