@@ -1,0 +1,111 @@
+{
+  "contentHash": "c4c5ebb55e7dbba25a9d6a2b2f73d067a807b08c90de6a76a6560ef34c44680d",
+  "record": {
+    "schemaVersion": "1.0",
+    "sessionId": "0b6f4c1e-3d2a-4e8b-9a71-5c2d8e9f1a3b",
+    "revision": 1,
+    "outcome": "optedOut",
+    "outcomeReason": "user asked to stop and confirmed; fields collected so far are included",
+    "previousRevision": null,
+    "fields": {
+      "deviceType": {
+        "value": "laptop",
+        "source": "call",
+        "collectedAt": "2026-11-10T10:00:20+05:30",
+        "status": "valid"
+      },
+      "deviceModel": {
+        "value": {
+          "brand": "Dell",
+          "model": "XPS 13"
+        },
+        "source": "call",
+        "collectedAt": "2026-11-10T10:00:40+05:30",
+        "status": "valid"
+      },
+      "problemDescription": {
+        "value": null,
+        "source": "call",
+        "collectedAt": "2026-11-10T10:01:00+05:30",
+        "status": "invalid"
+      },
+      "problemStartedAt": {
+        "value": null,
+        "source": null,
+        "collectedAt": null,
+        "status": "missing"
+      },
+      "urgency": {
+        "value": null,
+        "source": null,
+        "collectedAt": null,
+        "status": "missing"
+      },
+      "serialNumber": {
+        "value": null,
+        "source": null,
+        "collectedAt": null,
+        "status": "missing"
+      },
+      "purchaseInvoice": {
+        "value": null,
+        "source": null,
+        "collectedAt": null,
+        "status": "missing"
+      },
+      "serviceCentre": {
+        "value": null,
+        "source": null,
+        "collectedAt": null,
+        "status": "missing"
+      },
+      "email": {
+        "value": null,
+        "source": null,
+        "collectedAt": null,
+        "status": "missing"
+      },
+      "additionalPhotos": {
+        "value": null,
+        "source": null,
+        "collectedAt": null,
+        "status": "missing"
+      },
+      "additionalNotes": {
+        "value": null,
+        "source": null,
+        "collectedAt": null,
+        "status": "missing"
+      }
+    },
+    "missingRequired": [
+      "problemDescription",
+      "problemStartedAt",
+      "urgency",
+      "serialNumber",
+      "purchaseInvoice",
+      "serviceCentre",
+      "email"
+    ],
+    "conflicts": [],
+    "reviewFlags": [],
+    "submitConfirmation": null,
+    "engagement": {
+      "calls": 1,
+      "callSeconds": 212,
+      "chatMessages": 9,
+      "chatInputsSubmitted": 6,
+      "invalidAttempts": 1
+    },
+    "costUsd": 0.0123,
+    "costBreakdownUsd": {
+      "stt": 0.004,
+      "llm": 0.0021,
+      "tts": 0.0062,
+      "vision": 0
+    },
+    "actualSpendUsd": 0,
+    "createdAt": "2026-11-10T10:16:41+05:30",
+    "endedAt": "2026-11-10T10:16:40+05:30"
+  }
+}

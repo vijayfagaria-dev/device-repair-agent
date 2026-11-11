@@ -1,0 +1,148 @@
+{
+  "additionalNotes": {
+    "help": "Up to 1,000 characters.",
+    "kind": "text",
+    "label": "Anything else the technician should know? (optional)",
+    "required": false
+  },
+  "additionalPhotos": {
+    "accept": "image/jpeg,image/png,image/webp",
+    "help": "Up to 5 JPEG, PNG or WebP images, 10 MB each.",
+    "kind": "file",
+    "label": "Any photos of the device or the damage? (optional)",
+    "multiple": true,
+    "required": false
+  },
+  "deviceModel": {
+    "help": "For example: Samsung Galaxy S23 or Dell XPS 13. It's usually on the box or in Settings › About.",
+    "kind": "text",
+    "label": "Which brand and model is it?",
+    "placeholder": "Brand and model",
+    "required": true
+  },
+  "deviceType": {
+    "kind": "select",
+    "label": "What kind of device is it?",
+    "options": [
+      {
+        "label": "Phone",
+        "value": "smartphone"
+      },
+      {
+        "label": "Laptop",
+        "value": "laptop"
+      },
+      {
+        "label": "Tablet",
+        "value": "tablet"
+      },
+      {
+        "label": "Smartwatch",
+        "value": "smartwatch"
+      },
+      {
+        "label": "Headphones or earbuds",
+        "value": "headphones"
+      },
+      {
+        "label": "Something else",
+        "value": "other"
+      }
+    ],
+    "required": true
+  },
+  "email": {
+    "help": "We'll send claim updates here.",
+    "kind": "email",
+    "label": "Your email address",
+    "placeholder": "name@example.com",
+    "required": true
+  },
+  "problemDescription": {
+    "help": "Describe what happens, e.g. “the screen flickers and goes black after a minute”.",
+    "kind": "text",
+    "label": "What's wrong with the device?",
+    "required": true
+  },
+  "problemStartedAt": {
+    "help": "An approximate date is fine.",
+    "kind": "date",
+    "label": "When did the problem start?",
+    "required": true
+  },
+  "purchaseInvoice": {
+    "accept": "application/pdf,image/jpeg,image/png,image/webp",
+    "help": "A PDF, JPEG, PNG or WebP file up to 10 MB. HEIC photos aren't supported.",
+    "kind": "file",
+    "label": "Upload your purchase invoice",
+    "required": true
+  },
+  "serialNumber": {
+    "help": "Dial *#06# on a phone to see the IMEI (15 digits). Laptops and other devices: 8–20 letters and digits, on the label or in Settings.",
+    "kind": "text",
+    "label": "Serial number or IMEI",
+    "pattern": "^[A-Za-z0-9 \\-]{8,40}$",
+    "placeholder": "35 209900 176148 1",
+    "required": true
+  },
+  "serviceCentre": {
+    "kind": "select",
+    "label": "Which service centre suits you?",
+    "options": [
+      {
+        "label": "Koramangala Demo Repair Centre, Bengaluru",
+        "value": "blr-koramangala"
+      },
+      {
+        "label": "Whitefield Demo Repair Centre, Bengaluru",
+        "value": "blr-whitefield"
+      },
+      {
+        "label": "Andheri Demo Repair Centre, Mumbai",
+        "value": "mum-andheri"
+      },
+      {
+        "label": "Dadar Demo Repair Centre, Mumbai",
+        "value": "mum-dadar"
+      },
+      {
+        "label": "Saket Demo Repair Centre, Delhi",
+        "value": "del-saket"
+      },
+      {
+        "label": "Karol Bagh Demo Repair Centre, Delhi",
+        "value": "del-karol-bagh"
+      }
+    ],
+    "required": true
+  },
+  "submitConfirmation": {
+    "help": "Check the details above. You can still change anything.",
+    "kind": "confirm",
+    "label": "Submit your claim?",
+    "required": true
+  },
+  "urgency": {
+    "kind": "select",
+    "label": "How soon do you need it back?",
+    "options": [
+      {
+        "label": "No rush",
+        "value": "low"
+      },
+      {
+        "label": "Within a few days",
+        "value": "normal"
+      },
+      {
+        "label": "Urgently (in a day or two)",
+        "value": "high"
+      },
+      {
+        "label": "Immediately: I can't manage without it",
+        "value": "critical"
+      }
+    ],
+    "required": true
+  }
+}
