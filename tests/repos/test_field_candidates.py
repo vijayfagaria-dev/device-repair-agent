@@ -56,6 +56,17 @@ async def test_insert_field_candidate_stores_any_json_raw_value_with_defaults(db
     assert full.id > minimal.id
 
 
+async def test_a_none_raw_is_stored_as_json_null_not_sql_null(db) -> None:
+    """A skipped optional card answers null; the raw column is NOT NULL, so None must become JSON null."""
+    id = await seed_session(db.pool)
+    seq = await seed_event(db.pool, id)
+    skipped = await insert_field_candidate(
+        db.pool, session_id=id, event_seq=seq, field="additionalNotes", source="chat", raw=None, status="skipped"
+    )
+    assert skipped.raw is None
+    assert await db.pool.fetchval("SELECT raw::text FROM field_candidates WHERE id = $1", skipped.id) == "null"
+
+
 async def test_list_field_candidates_returns_all_candidates_or_one_fields_in_insertion_order(db) -> None:
     id = await seed_session(db.pool)
     seq = await seed_event(db.pool, id)

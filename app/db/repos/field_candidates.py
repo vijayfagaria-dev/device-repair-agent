@@ -70,12 +70,13 @@ async def insert_field_candidate(
 ) -> FieldCandidate:
     """`event_seq` is the event that introduced the value; it may be appended later in the same transaction (deferred FK).
 
-    `normalized=None` is stored as SQL NULL (as in the TS), never as JSON null.
+    `raw=None` is stored as JSON null (the column is NOT NULL: a skipped optional card answers null); `normalized=None`
+    is stored as SQL NULL (as in the TS), never as JSON null.
     """
     row = await db.fetchrow(
         f"""INSERT INTO field_candidates
        (session_id, event_seq, field, source, raw, normalized, status, error, user_confirmed, collected_at, evidence)
-     VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8, $9, COALESCE($10::timestamptz, now()), $11)
+     VALUES ($1, $2, $3, $4, COALESCE($5::jsonb, 'null'::jsonb), $6::jsonb, $7, $8, $9, COALESCE($10::timestamptz, now()), $11)
      RETURNING {COLUMNS}""",
         session_id,
         event_seq,
