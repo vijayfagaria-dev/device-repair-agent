@@ -180,7 +180,8 @@ describe("GET /files/:id (signed links)", () => {
     const good = new URL(linkFor(fileId));
     const sig = good.searchParams.get("sig") ?? "";
     const tamperedSig = new URL(good);
-    tamperedSig.searchParams.set("sig", `${sig.slice(0, -1)}${sig.endsWith("A") ? "B" : "A"}`);
+    // Change the first character: the last base64 character carries unused bits, so changing only it can decode to the same bytes.
+    tamperedSig.searchParams.set("sig", `${sig.startsWith("A") ? "B" : "A"}${sig.slice(1)}`);
     const tamperedExp = new URL(good);
     tamperedExp.searchParams.set("exp", String(Number(good.searchParams.get("exp")) + 1));
     const otherFile = new URL(good);
