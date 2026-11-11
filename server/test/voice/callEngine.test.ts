@@ -324,18 +324,36 @@ describe("playback, not sending, is what counts (found by the real-provider call
 
   it("audio sent 8× faster than real time: after the last frame is sent the user still hears it, so barge-in still works", async () => {
     const c = await call({ greeting: { text: long }, fastAudio: true });
-    await c.step(800); // every frame has been sent (the fake sends a 40 ms frame every 5 ms)…
-    expect(c.sent.filter((m) => m.type === "transcript" && m.role === "agent" && m.final)).toHaveLength(1); // …so the line is final
+    await c.step(800); // every frame has been sent (the fake sends a 40 ms frame every 5 ms), but only the first sentence is playing…
+    expect(c.sent.filter((m) => m.type === "transcript" && m.role === "agent" && m.final)).toHaveLength(0); // …so the line is not final yet
     c.stt.current.emit({ type: "speechStarted" });
     c.stt.current.emit({ type: "transcript", text: "hang on", isFinal: false, speechFinal: false });
     expect(c.sent.some((m) => m.type === CallServerMessageType.STOP_PLAYBACK)).toBe(true);
-    // The line is corrected in place (same id) to what was heard.
+    // The line is closed in place (same id) at what was heard.
     const lines = agentLines(c.sent).filter((l) => l.type === "transcript" && l.id === "ta_c1_1" && l.final);
-    expect(lines).toHaveLength(2);
-    expect(lines[1]?.type === "transcript" && lines[1].text.endsWith("[interrupted]")).toBe(true);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]?.type === "transcript" && lines[0].text.endsWith("[interrupted]")).toBe(true);
     await c.step(500);
     const persisted = c.port.of("AppendTranscript").find((cmd) => (cmd.line as { role: string }).role === "agent")?.line as { interrupted: boolean };
     expect(persisted.interrupted).toBe(true);
+    await c.engine.stop("hangup");
+  });
+
+  // User report (2026-11-11): "text and voice are not matching in order". The transcript showed a whole reply while the
+  // voice was still on its first sentence; now each sentence appears when its audio starts playing.
+  it("the transcript grows sentence by sentence as the voice reaches each one, and is final after the last starts", async () => {
+    const c = await call({ greeting: { text: long }, fastAudio: true });
+    const agentText = () => c.sent.filter((m): m is Extract<typeof m, { type: "transcript" }> => m.type === "transcript" && m.role === "agent");
+    await c.step(800); // all audio sent, ~1 s of it playing
+    const early = agentText();
+    expect(early.length).toBeGreaterThan(0);
+    expect(early.every((m) => !m.final)).toBe(true);
+    expect(early.at(-1)?.text).toBe("Thanks for calling the repair desk. I can help you register your claim today, and it only takes a few minutes.");
+    await c.step(6_000); // played out
+    const all = agentText();
+    expect(all.at(-1)).toMatchObject({ final: true, text: long });
+    // Each message extends the previous one: never out of order, never shorter.
+    for (let i = 1; i < all.length; i++) expect(all[i]?.text.startsWith(all[i - 1]?.text ?? "")).toBe(true);
     await c.engine.stop("hangup");
   });
 

@@ -30,6 +30,10 @@ interface Chunk {
   audioMs: number;
   /** All of its audio has arrived (Flushed). */
   complete?: boolean;
+  /** When the browser starts playing it (the play cursor when its first frame arrived). */
+  startAt?: number;
+  /** Its text has been sent to the browser: the transcript shows a sentence when its voice starts, not before. */
+  shown?: boolean;
 }
 
 /** Speaking rate assumed before any chunk has finished (Aura-2 at a normal pace, about 15 characters a second). */
@@ -80,6 +84,11 @@ export class SpeechTurn {
    */
   #playCursor: number | null = null;
   #unflushed = 0;
+  /** Chunks whose text the browser has been sent. */
+  #shown = 0;
+  /** The turn finished sending audio; its final transcript waits until every chunk has been shown. */
+  #finalPending = false;
+  readonly #revealTimers: unknown[] = [];
   #ended = false;
   #finished = false;
   #cancelled: SpokenTurn | null = null;
@@ -178,7 +187,34 @@ export class SpeechTurn {
     this.#unflushed += 1;
     this.tts.speak(this.id, text);
     this.tts.flush(this.id);
-    this.send({ type: CallServerMessageType.TRANSCRIPT, id: this.id, role: Role.AGENT, text: this.#text, final: false });
+    // The text is shown later, when this chunk's audio starts playing (#reveal), so the transcript keeps pace with the voice.
+  }
+
+  /** Shows chunk `index` (and so everything before it) in the transcript, at `at` on the clock. */
+  #scheduleReveal(index: number, at: number): void {
+    const wait = at - this.clock.now();
+    if (wait <= 0) this.#reveal(index);
+    else this.#revealTimers.push(this.clock.setTimeout(() => this.#reveal(index), wait));
+  }
+
+  #reveal(index: number): void {
+    const chunk = this.#chunks[index];
+    if (!chunk || chunk.shown || this.#cancelled) return;
+    for (const earlier of this.#chunks.slice(0, index + 1)) {
+      if (!earlier.shown) {
+        earlier.shown = true;
+        this.#shown += 1;
+      }
+    }
+    const text = this.#chunks.slice(0, index + 1).map((c) => c.text).join(" ");
+    this.send({ type: CallServerMessageType.TRANSCRIPT, id: this.id, role: Role.AGENT, text, final: false });
+    this.#sendFinalIfReady();
+  }
+
+  #sendFinalIfReady(): void {
+    if (!this.#finalPending || this.#cancelled || this.#shown < this.#chunks.length) return;
+    this.#finalPending = false;
+    if (this.#text) this.send({ type: CallServerMessageType.TRANSCRIPT, id: this.id, role: Role.AGENT, text: this.#text, final: true });
   }
 
   /** A TTS event for this turn (the engine routes by turnId). */
@@ -187,14 +223,28 @@ export class SpeechTurn {
     if (event.type === "audio") {
       const now = this.clock.now();
       this.#firstAudioAt ??= now;
-      this.#playCursor = Math.max(this.#playCursor ?? now, now) + (event.pcm.length * 1000) / pcmBytesPerSecond(event.sampleRate);
+      const startsAt = Math.max(this.#playCursor ?? now, now);
+      this.#playCursor = startsAt + (event.pcm.length * 1000) / pcmBytesPerSecond(event.sampleRate);
       this.#audioBytes += event.pcm.length;
-      const current = this.#chunks[this.#chunks.length - this.#unflushed];
+      const currentIndex = this.#chunks.length - this.#unflushed;
+      const current = this.#chunks[currentIndex];
+      if (current && current.startAt === undefined) {
+        current.startAt = startsAt;
+        this.#scheduleReveal(currentIndex, startsAt);
+      }
       if (current) current.audioMs += (event.pcm.length * 1000) / pcmBytesPerSecond(event.sampleRate);
       this.send({ type: CallServerMessageType.AUDIO, data: event.pcm.toString("base64"), sampleRate: event.sampleRate });
     } else if (event.type === "flushed") {
-      const finished = this.#chunks[this.#chunks.length - this.#unflushed];
-      if (finished) finished.complete = true;
+      const finishedIndex = this.#chunks.length - this.#unflushed;
+      const finished = this.#chunks[finishedIndex];
+      if (finished) {
+        finished.complete = true;
+        // A chunk that came back without any audio is shown when the player gets to it.
+        if (finished.startAt === undefined) {
+          finished.startAt = Math.max(this.#playCursor ?? this.clock.now(), this.clock.now());
+          this.#scheduleReveal(finishedIndex, finished.startAt);
+        }
+      }
       this.#unflushed = Math.max(0, this.#unflushed - 1);
       this.#maybeFinish();
     }
@@ -203,7 +253,8 @@ export class SpeechTurn {
   #maybeFinish(): void {
     if (!this.#ended || this.#unflushed > 0 || this.#finished) return;
     this.#finished = true;
-    if (this.#text) this.send({ type: CallServerMessageType.TRANSCRIPT, id: this.id, role: Role.AGENT, text: this.#text, final: true });
+    this.#finalPending = true;
+    this.#sendFinalIfReady(); // otherwise the last reveal sends it
     this.#resolveDone(this.#result(false, this.#text));
   }
 
@@ -228,6 +279,8 @@ export class SpeechTurn {
     const playedMs = Math.max(0, this.sentMs() - this.bufferedMs());
     const heard = heardText(this.#chunks, playedMs);
     this.tts.cancel(this.id);
+    for (const timer of this.#revealTimers) this.clock.clearTimeout(timer);
+    this.#finalPending = false;
     this.#finished = true;
     this.#cancelled = this.#result(true, heard);
     // The line (maybe already sent as final with the full text) is corrected in place: same id. Nothing sent yet:
