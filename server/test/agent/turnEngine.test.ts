@@ -26,7 +26,7 @@ function setup(outcomes: (call: ParsedToolCall) => ToolOutcome = () => ({ result
       { history: [{ role: "system", content: "prompt" }, { role: "user", content: "hi" }], state: async () => ({ role: "system", content: `STATE ${++states}` }), signal },
       { say: (text) => said.push(text) },
     );
-  return { llm, ran, said, go, states: () => states };
+  return { llm, ran, said, go, states: () => states, outcome: outcomes };
 }
 const save = (field: string, value: string) => ({ name: "save_field", args: { field, value, spoken_evidence: value } });
 
@@ -211,4 +211,62 @@ describe("no double acknowledgement (seen in a real gpt-oss-20b call)", () => {
     await t.go();
     expect(t.llm.requests).toHaveLength(2);
   });
+
+  // Live (2026-11-11 22:55): "I've sent a card in the chat for you to type in your serial number" was said after the
+  // customer had typed it. Root causes: a follow-up round with nothing to ask, and text from a state that went stale.
+  it("an acknowledgement with nothing left to ask ends the turn: no follow-up round restating the card", async () => {
+    const t = setup(() => ({ result: { status: "sent" }, ok: true, ack: "I've sent a box to your chat for the serial number." }));
+    t.llm.enqueue({ toolCalls: [{ name: "request_chat_input", args: { field: "serialNumber" } }] }, { text: "I've sent a card in the chat for you to type in your serial number." });
+    const out = await runTurnWith(t, { moreToAsk: async () => false });
+    expect(out.spoken).toBe("I've sent a box to your chat for the serial number.");
+    expect(t.llm.requests).toHaveLength(1);
+  });
+
+  it("with something still to ask, the follow-up round runs as before", async () => {
+    const t = setup(() => ({ result: { status: "valid" }, ok: true, ack: "Got it." }));
+    t.llm.enqueue({ toolCalls: [save("deviceType", "smartphone")] }, { text: "Which model is it?" });
+    const out = await runTurnWith(t, { moreToAsk: async () => true });
+    expect(out.spoken).toBe("Got it. Which model is it?");
+  });
+
+  it("a safety flag has no acknowledgement, so it still gets its follow-up even with nothing left to ask", async () => {
+    const t = setup(() => ({ result: { status: "flagged" }, ok: true }));
+    t.llm.enqueue({ toolCalls: [{ name: "flag_for_review", args: { kind: "safety", reason: "swollen battery" } }] }, { text: "Please stop using and charging it now." });
+    const out = await runTurnWith(t, { moreToAsk: async () => false });
+    expect(out.spoken).toBe("Please stop using and charging it now.");
+  });
+
+  it("model text written from a stale state is not spoken, and no follow-up round runs", async () => {
+    const t = setup();
+    let stale = false;
+    t.llm.enqueue({ text: "Please type your serial number in the chat.", pieceChars: 10, gate: async () => {
+      stale = true;
+    } }, { text: "Anything else?" });
+    const out = await runTurnWith(t, { isStale: () => stale });
+    expect(out.spoken).toBe("");
+    expect(t.llm.requests).toHaveLength(1);
+  });
+
+  it("an acknowledgement built from validated results is still spoken when the state went stale", async () => {
+    const t = setup(() => ({ result: { status: "valid" }, ok: true, ack: "Got it." }));
+    t.llm.enqueue({ toolCalls: [save("deviceType", "smartphone")] });
+    const out = await runTurnWith(t, { isStale: () => true });
+    expect(out.spoken).toBe("Got it.");
+    expect(t.llm.requests).toHaveLength(1);
+  });
 });
+
+/** runTurn with the setup's fakes and extra input hooks. */
+function runTurnWith(t: ReturnType<typeof setup>, hooks: { moreToAsk?: () => Promise<boolean>; isStale?: () => boolean }) {
+  return runTurn(
+    { llm: t.llm, tools: {
+        run: async (call) => {
+          t.ran.push(call);
+          return t.outcome(call);
+        },
+      },
+    },
+    { history: [{ role: "system", content: "prompt" }, { role: "user", content: "hi" }], state: async () => ({ role: "system", content: "STATE" }), ...hooks },
+    { say: (text) => t.said.push(text) },
+  );
+}

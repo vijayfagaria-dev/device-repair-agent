@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { fieldLabel, formatValue, readField } from "../../lib/record";
+import { fieldLabel, formatField, readField } from "../../lib/record";
 
 export function FieldList({ fields }: { fields: Record<string, unknown> }) {
   return (
@@ -10,7 +10,7 @@ export function FieldList({ fields }: { fields: Record<string, unknown> }) {
           <Fragment key={name}>
             <dt>{fieldLabel(name)}</dt>
             <dd className={flagged ? "flagged" : undefined}>
-              {formatValue(value)}
+              {formatField(name, value)}
               {Boolean(source) && <span className="src">{String(source)}</span>}
               {flagged && <span className="status">{String(status)}</span>}
             </dd>

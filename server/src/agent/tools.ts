@@ -8,6 +8,8 @@ import type { ToolDefinition } from "../voice/types.js";
 
 /** Fields the agent may save from speech (catalog `spokenCapture`): the call fields plus identifiers heard aloud. */
 export const SPOKEN_FIELDS = RECORD_FIELD_IDS.filter((id) => FIELDS[id].spokenCapture);
+/** The fields the agent asks for by talking: spoken-capture fields that are not chat cards (identifiers are typed). */
+export const VOICE_FIELDS = SPOKEN_FIELDS.filter((id) => !(CHAT_FIELDS as readonly string[]).includes(id));
 /** Cards the agent may send: the chat fields, the optional ones and the submit confirmation. */
 export const CARD_FIELDS = [...CHAT_FIELDS, ...OPTIONAL_FIELDS, "submitConfirmation"] as const;
 

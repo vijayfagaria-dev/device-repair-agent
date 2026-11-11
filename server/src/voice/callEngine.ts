@@ -19,7 +19,7 @@ import type { FastifyBaseLogger } from "fastify";
 import { isRecordField } from "../agent/chatPlanner.js";
 import { systemMessage } from "../agent/prompt.js";
 import { type ChatEventNote, stateMessage } from "../agent/stateMessage.js";
-import type { ParsedToolCall } from "../agent/tools.js";
+import { type ParsedToolCall, VOICE_FIELDS } from "../agent/tools.js";
 import { groundingError } from "../agent/grounding.js";
 import { runTurn, type ToolOutcome, type ToolRunner } from "../agent/turnEngine.js";
 import { cardSentAck, OPTED_OUT_GOODBYE, PROVIDER_TROUBLE, REPROMPTS, SUBMITTED_GOODBYE, savedAck, typeItAck } from "../agent/voiceTemplates.js";
@@ -112,6 +112,8 @@ export class CallEngine {
   #sttGen = 0;
   #failures = 0;
   #pending: ChatEventNote[] = [];
+  /** Counts chat events that reached the call: a turn that started before one has a stale state (turnEngine isStale). */
+  #chatSeq = 0;
   readonly #rejections = new Map<string, number>();
   #lastCardAt = -Infinity;
   #reprompts = 0;
@@ -332,6 +334,7 @@ export class CallEngine {
   }
 
   async #runAgentTurn(turn: AgentTurn, notes: ChatEventNote[]): Promise<void> {
+    const seq = this.#chatSeq;
     const out = await runTurn(
       {
         llm: this.#o.llm,
@@ -339,7 +342,13 @@ export class CallEngine {
         // Charged as each call ends, not after playback (P5 review #16); an aborted call still counts as a request.
         onRound: (route, usage) => void (usage ? this.#o.port.recordLlmUsage(route, usage) : this.#o.port.recordLlmRequest(route)),
       },
-      { history: [systemMessage(), ...this.#history], state: () => this.#state(notes), signal: turn.abort.signal },
+      {
+        history: [systemMessage(), ...this.#history],
+        state: () => this.#state(notes),
+        signal: turn.abort.signal,
+        moreToAsk: () => this.#moreToSay(),
+        isStale: () => this.#chatSeq !== seq,
+      },
       { say: (text) => turn.speech.say(text), breakChunk: () => turn.speech.breakChunk() },
     );
     turn.speech.end();
@@ -537,7 +546,19 @@ export class CallEngine {
     }
   }
 
+  /**
+   * Whether a follow-up round has anything to do: a field the agent collects by talking is still missing, or the
+   * customer has no card to act on yet (the agent has to send the next one). With every voice field collected and a card
+   * already open, the turn is complete: the system has announced the card and the answer comes in the chat.
+   */
+  async #moreToSay(): Promise<boolean> {
+    const ctx = await this.#o.port.context(this.#o.callId);
+    if (VOICE_FIELDS.some((id) => ctx.fields[id].status !== "valid" && ctx.fields[id].status !== "skipped")) return true;
+    return !ctx.requests.some((r) => r.status === "open" || r.status === "queued");
+  }
+
   #note(note: ChatEventNote): void {
+    this.#chatSeq++;
     // One note per field: the latest outcome is what the agent should mention.
     this.#pending = [...this.#pending.filter((n) => n.field !== note.field), note];
     this.#scheduleProactive();

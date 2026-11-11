@@ -46,6 +46,20 @@ export interface TurnInput {
   /** A fresh state message for each model call (tool results may have changed it). */
   state: () => Promise<LlmMessage>;
   signal?: AbortSignal;
+  /**
+   * Whether anything the model could still ask the customer by voice is left (a voice field not yet collected). When
+   * an acknowledgement was just spoken and nothing is left, the turn ends there instead of running a follow-up round
+   * that would only restate what the system already announced (a card is open; the answer comes in the chat).
+   * Default: something is left.
+   */
+  moreToAsk?: () => Promise<boolean>;
+  /**
+   * True once a chat event arrived that this turn's state does not contain. The model's text was written from an older
+   * state and would be stale when spoken (it asks for what the customer has just typed): it is dropped, and the event
+   * gets its own turn with fresh state (call engine: pending notes → proactive turn). Acknowledgements the system built
+   * from validated results are still spoken: they are facts, not the model's guesses.
+   */
+  isStale?: () => boolean;
 }
 
 export interface RoundRecord {
@@ -145,7 +159,7 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
     const filter = new SpeechFilter();
     const emit = (raw: string) => speak(filter.push(raw));
     const speak = (raw: string) => {
-      if (asked || !raw) return;
+      if (asked || !raw || input.isStale?.()) return;
       const q = raw.indexOf("?");
       const delta = q === -1 ? raw : raw.slice(0, q + 1);
       if (q !== -1) asked = true;
@@ -212,6 +226,7 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
 
     if (calls.length === 0) {
       if (text.trim()) out.messages.push({ role: "assistant", content: text });
+      else if (input.isStale?.()) break; // its text was dropped as stale: not a failure, the chat event gets its own turn
       else if (!out.spoken) {
         out.refused = true;
         out.failed = true;
@@ -252,8 +267,12 @@ export async function runTurn(deps: TurnDeps, input: TurnInput, sink: TurnSink):
       out.endCall = true;
       break;
     }
-    // Spoken already and only a quiet rejection (a refused made-up value): no second round that asks again.
-    const needFollowUp = !asked && (!text.trim() || outcomes.some((o) => !o.ok && !o.quiet));
+    // A follow-up round exists to ask the next question or to react to an invalid value. It does not run when a question
+    // was asked, when the turn's state went stale, or when an acknowledgement was spoken and there is nothing left to ask.
+    const reactToInvalid = outcomes.some((o) => !o.ok && !o.quiet);
+    const spokeAck = !text.trim() && content !== null;
+    const nothingToAsk = spokeAck && !reactToInvalid && input.moreToAsk ? !(await input.moreToAsk()) : false;
+    const needFollowUp = !asked && !(input.isStale?.() ?? false) && !nothingToAsk && (!text.trim() || reactToInvalid);
     if (!needFollowUp) break;
   }
   return out;
