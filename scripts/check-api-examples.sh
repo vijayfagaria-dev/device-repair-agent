@@ -14,13 +14,13 @@ set -u -o pipefail
 
 BASE="${1:-http://localhost:8080}"
 BASE="${BASE%/}"
-README="$(cd "$(dirname "$0")/.." && pwd)/README.md"
+README="$(cd "$(dirname "$0")/.." && pwd)/docs/api.md" # the API reference lives in docs/api.md
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 command -v curl >/dev/null || { echo "curl is required" >&2; exit 2; }
 case "$BASE" in http://*|https://*) ;; *) echo "usage: $0 [http(s)://host[:port]]" >&2; exit 2 ;; esac
-[ -f "$README" ] || { echo "README.md not found at $README" >&2; exit 2; }
+[ -f "$README" ] || { echo "docs/api.md not found at $README" >&2; exit 2; }
 
 failed=0
 passed=0
@@ -55,7 +55,7 @@ check() {
 documented() {
   # The endpoint in backticks, as the table writes it, and followed by the closing backtick or a query string
   # (a bare substring would let "GET /a/b" be satisfied by a README that only mentions "GET /a/b/c").
-  if grep -qF -- "\`$1\`" "$README" || grep -qF -- "\`$1?" "$README"; then pass "README documents $1"; else fail "README documents $1" "not found in README.md"; fi
+  if grep -qF -- "\`$1\`" "$README" || grep -qF -- "\`$1?" "$README"; then pass "README documents $1"; else fail "README documents $1" "not found in docs/api.md"; fi
 }
 
 # A fresh random handshake key (any 16 random bytes, base64) for the WebSocket examples.
