@@ -17,6 +17,11 @@ export interface Utterance {
   /** When the first words were heard and when the turn ended (ms, the clock's). */
   startedAt: number;
   endedAt: number;
+  /**
+   * When STT said the utterance was over (the last `speech_final` or `UtteranceEnd`), before the merge window:
+   * the start of the server-side latency (D20). `endedAt - endEventAt` is the turn's own finalization wait.
+   */
+  endEventAt: number;
 }
 
 export interface UserTurnOptions {
@@ -41,6 +46,7 @@ export class UserTurns {
   #count = 0;
   #current: { id: string; finals: string[]; interim: string; startedAt: number } | null = null;
   #endTimer: unknown = null;
+  #endEventAt: number | null = null;
   #speechStartedAt: number | null = null;
   #noWordsTimer: unknown = null;
 
@@ -85,8 +91,10 @@ export class UserTurns {
         this.#transcript(event.text.trim(), event.isFinal, event.speechFinal);
         return;
       case "utteranceEnd":
-        if (this.#current) this.#end();
-        else if (this.#speechStartedAt !== null) {
+        if (this.#current) {
+          this.#endEventAt = this.#options.clock.now();
+          this.#end();
+        } else if (this.#speechStartedAt !== null) {
           this.#speechStartedAt = null; // noise that never became words
           this.#options.onSpeechAbandoned?.();
         }
@@ -113,6 +121,7 @@ export class UserTurns {
       const c = this.#current;
       this.#options.onLine({ id: c.id, text: [...c.finals, c.interim].filter(Boolean).join(" "), final: false });
     }
+    if (speechFinal && this.#current) this.#endEventAt = this.#options.clock.now();
     if (speechFinal && this.#current && this.#endTimer === null) {
       this.#endTimer = this.#options.clock.setTimeout(() => {
         this.#endTimer = null;
@@ -129,12 +138,14 @@ export class UserTurns {
   #end(): void {
     this.#cancelEnd();
     const c = this.#current;
+    const endEventAt = this.#endEventAt ?? this.#options.clock.now();
     this.#current = null;
+    this.#endEventAt = null;
     this.#speechStartedAt = null;
     if (!c) return;
     const text = (c.finals.length > 0 ? c.finals.join(" ") : c.interim).trim();
     this.#options.onLine({ id: c.id, text, final: true });
-    if (text) this.#options.onTurnEnd({ id: c.id, text, startedAt: c.startedAt, endedAt: this.#options.clock.now() });
+    if (text) this.#options.onTurnEnd({ id: c.id, text, startedAt: c.startedAt, endedAt: this.#options.clock.now(), endEventAt });
   }
 
   /** Ends any utterance in progress now (the call is ending). */

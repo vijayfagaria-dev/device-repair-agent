@@ -22,6 +22,7 @@ import { type ChatEventNote, stateMessage } from "../agent/stateMessage.js";
 import type { ParsedToolCall } from "../agent/tools.js";
 import { runTurn, type ToolOutcome, type ToolRunner } from "../agent/turnEngine.js";
 import { cardSentAck, OPTED_OUT_GOODBYE, PROVIDER_TROUBLE, REPROMPTS, SUBMITTED_GOODBYE, savedAck, typeItAck } from "../agent/voiceTemplates.js";
+import { buildTurnMetric } from "../metrics/latency.js";
 import type { SessionUpdate } from "../session/hub.js";
 import type { CallEndReason, SaveSpokenFieldReply } from "../session/handlers/call.js";
 import type { RequestInputReply } from "../session/handlers/requestInput.js";
@@ -81,6 +82,8 @@ interface AgentTurn {
   speech: SpeechTurn;
   abort: AbortController;
   userEndAt: number | null;
+  /** STT's end-of-utterance event → this turn starting (the merge window); null for a turn no utterance caused. */
+  sttMs: number | null;
   running: Promise<void>;
 }
 
@@ -271,7 +274,7 @@ export class CallEngine {
         turn.speech.cancel();
       }
     }
-    void this.#agentTurn({ userText: utterance.text, userEndAt: utterance.endedAt });
+    void this.#agentTurn({ userText: utterance.text, userEndAt: utterance.endEventAt, sttMs: utterance.endedAt - utterance.endEventAt });
   }
 
   #checkBargeIn(): void {
@@ -300,7 +303,7 @@ export class CallEngine {
   // -------------------------------------------------------------------------------------------------------------------
   // The agent
 
-  async #agentTurn(input: { userText?: string; userEndAt?: number; opening?: string; proactive?: boolean }): Promise<void> {
+  async #agentTurn(input: { userText?: string; userEndAt?: number; sttMs?: number; opening?: string; proactive?: boolean }): Promise<void> {
     if (this.#stopping) return;
     this.#clearSilence();
     this.#clearProactive();
@@ -318,9 +321,12 @@ export class CallEngine {
     const notes = this.#pending.splice(0);
     const id = `ta_${this.#o.callId}_${++this.#turnCount}`;
     const speech = new SpeechTurn(id, this.#tts, this.#o.clock, (message) => this.#o.send(message));
-    const turn: AgentTurn = { id, speech, abort: new AbortController(), userEndAt: input.userEndAt ?? null, running: Promise.resolve() };
+    const turn: AgentTurn = { id, speech, abort: new AbortController(), userEndAt: input.userEndAt ?? null, sttMs: input.sttMs ?? null, running: Promise.resolve() };
     this.#turn = turn;
-    turn.running = this.#runAgentTurn(turn, notes).catch((err) => this.#o.log.error({ message: (err as Error).message }, "agent turn failed"));
+    turn.running = this.#runAgentTurn(turn, notes).catch((err) => {
+      this.#o.log.error({ message: (err as Error).message }, "agent turn failed");
+      this.#recordTurnMetric(turn, null, null); // a reply to a user utterance still gets its row
+    });
     await turn.running;
   }
 
@@ -342,16 +348,7 @@ export class CallEngine {
     // Chat events this turn never got to mention go back for the next one (P5 review #8).
     if (!spoken.heard && (out.aborted || spoken.interrupted)) this.#restoreNotes(notes);
     if (spoken.characters > 0) void this.#o.port.recordTtsCharacters(spoken.characters);
-    if (turn.userEndAt !== null || spoken.firstAudioAt !== null) {
-      void this.#o.port.recordTurnMetric({
-        turnId: turn.id,
-        callId: this.#o.callId,
-        ...(turn.userEndAt !== null ? { userEndAt: new Date(turn.userEndAt) } : {}),
-        ...(spoken.firstAudioAt !== null ? { firstAudioAt: new Date(spoken.firstAudioAt) } : {}),
-        ...(turn.userEndAt !== null && spoken.firstAudioAt !== null ? { serverMs: Math.max(0, Math.round(spoken.firstAudioAt - turn.userEndAt)) } : {}),
-        ...(out.rounds[0]?.ttftMs != null ? { llmTtftMs: out.rounds[0].ttftMs } : {}),
-      });
-    }
+    this.#recordTurnMetric(turn, spoken, out.rounds[0]?.ttftMs ?? null);
     if (out.refused) this.#dispatchQuietly({ type: "FlagForReview", kind: "other", reason: "the call agent gave no usable reply" });
     if (this.#turn === turn) this.#turn = null;
     if (this.#stopping) return;
@@ -368,6 +365,20 @@ export class CallEngine {
     }
     if (!spoken.interrupted) this.#armSilence();
     if (this.#pending.length > 0) this.#scheduleProactive();
+  }
+
+  /** The turn's latency row (P11-T02, D20). Never fails the call: the port logs a write error. */
+  #recordTurnMetric(turn: AgentTurn, spoken: SpokenTurn | null, llmTtftMs: number | null): void {
+    const metric = buildTurnMetric({
+      turnId: turn.id,
+      callId: this.#o.callId,
+      userEndAt: turn.userEndAt,
+      firstAudioAt: spoken?.firstAudioAt ?? null,
+      sttMs: turn.sttMs,
+      llmTtftMs,
+      ttsTtfbMs: spoken?.ttsTtfbMs ?? null,
+    });
+    if (metric) void this.#o.port.recordTurnMetric(metric);
   }
 
   /** Waits for the turn to play out, at most TURN_WATCHDOG_MS (a provider that never finishes can't hang the call). */
@@ -422,7 +433,7 @@ export class CallEngine {
     if (gen !== this.#turnGen) return;
     const id = `ta_${this.#o.callId}_${++this.#turnCount}`;
     const speech = new SpeechTurn(id, this.#tts, this.#o.clock, (message) => this.#o.send(message));
-    const turn: AgentTurn = { id, speech, abort: new AbortController(), userEndAt: null, running: Promise.resolve() };
+    const turn: AgentTurn = { id, speech, abort: new AbortController(), userEndAt: null, sttMs: null, running: Promise.resolve() };
     this.#turn = turn;
     speech.say(text);
     speech.end();

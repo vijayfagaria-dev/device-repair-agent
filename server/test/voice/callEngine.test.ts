@@ -192,6 +192,45 @@ describe("a user turn", () => {
     expect(c.port.sttSeconds).toEqual([1]); // 50 frames of 20 ms
   });
 
+  it("every reply to a user utterance gets a latency row measured from STT's end event (P11-T02)", async () => {
+    const c = await call();
+    await c.step(3_000);
+    const rows = () => c.port.metrics.filter((m) => m.userEndAt !== undefined);
+    for (let n = 0; n < 6; n++) {
+      c.llm.enqueue({ text: `Answer number ${n}.` });
+      c.stt.current.say(`my message number ${n}`);
+      await c.step(300); // the merge window after speech_final
+      await c.step(4_000);
+    }
+    expect(rows()).toHaveLength(6); // 6 replies after 6 utterances: 100% (the plan asks for ≥ 95%)
+    for (const row of rows()) {
+      const userEndAt = (row.userEndAt as Date).getTime();
+      const firstAudioAt = (row.firstAudioAt as Date).getTime();
+      expect(row.sttMs).toBe(300); // speech_final → the turn starts: the merge window
+      expect(row.serverMs).toBe(firstAudioAt - userEndAt);
+      expect(row.serverMs as number).toBeGreaterThanOrEqual(0);
+      expect(typeof row.llmTtftMs).toBe("number");
+      expect(typeof row.ttsTtfbMs).toBe("number");
+    }
+    // The greeting follows no user utterance: it has audio but no user end, so no serverMs and no sttMs.
+    expect(c.port.metrics.find((m) => m.turnId === "ta_c1_1")).toMatchObject({ callId: "c1" });
+    expect(c.port.metrics.find((m) => m.turnId === "ta_c1_1")?.serverMs).toBeUndefined();
+    await c.engine.stop("hangup");
+  });
+
+  it("a reply the model failed to produce still gets its row, without server latency (P11-T02)", async () => {
+    const c = await call();
+    await c.step(3_000);
+    c.llm.enqueue({ error: new LlmError("down", 503) });
+    c.stt.current.say("my phone is broken");
+    await c.step(300);
+    await c.step(4_000);
+    const row = c.port.metrics.find((m) => m.userEndAt !== undefined);
+    expect(row).toBeDefined();
+    expect(row?.sttMs).toBe(300);
+    await c.engine.stop("hangup");
+  });
+
   it("an identifier said aloud is saved as heard-only, and its chat card goes out at once (D13)", async () => {
     const c = await call();
     await c.step(3_000);

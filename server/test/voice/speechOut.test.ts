@@ -48,6 +48,7 @@ describe("SpeechTurn", () => {
     await tts.open((e) => speech?.onTts(e));
     const stream = tts.current;
     speech = new SpeechTurn("ta_c1_1", stream, clock, (m) => sent.push(m));
+    const firstSpeakAt = clock.now();
     speech.say("Got it, a Samsung. ");
     speech.say("When did it start?");
     speech.end();
@@ -62,6 +63,9 @@ describe("SpeechTurn", () => {
     expect(stream.spoken()).toBe("Got it, a Samsung. When did it start?");
     expect(spoken).toMatchObject({ id: "ta_c1_1", text: "Got it, a Samsung. When did it start?", interrupted: false, characters: 36 });
     expect(spoken.firstAudioAt).not.toBeNull();
+    // Time to first byte runs from the first text sent to TTS to the first audio back (P11-T02).
+    expect(spoken.ttsTtfbMs).toBe((spoken.firstAudioAt as number) - firstSpeakAt);
+    expect(spoken.ttsTtfbMs).toBeGreaterThanOrEqual(0);
     expect(sent.filter((m) => m.type === CallServerMessageType.AUDIO).every((m) => m.type === "audio" && m.sampleRate === 24000)).toBe(true);
   });
 

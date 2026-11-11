@@ -18,6 +18,8 @@ export interface SpokenTurn {
   /** What the user heard, when interrupted (the line is truncated to this plus " [interrupted]"). */
   heard: string;
   firstAudioAt: number | null;
+  /** First text sent to TTS → first audio back (the provider's time to first byte); null when no audio came. */
+  ttsTtfbMs: number | null;
   /** Characters sent to TTS (the ledger's Aura-2 meter). */
   characters: number;
 }
@@ -71,6 +73,7 @@ export class SpeechTurn {
   #text = "";
   #audioBytes = 0;
   #firstAudioAt: number | null = null;
+  #firstSpeakAt: number | null = null;
   /**
    * When the browser will have played everything received so far: each frame plays after the previous one, or when it
    * arrives if the player had run dry (a gap: ack → follow-up, a slow route). P5 review #9.
@@ -169,6 +172,7 @@ export class SpeechTurn {
   }
 
   #sendChunk(text: string): void {
+    this.#firstSpeakAt ??= this.clock.now();
     this.#chunks.push({ text, audioMs: 0, complete: false });
     this.#text = this.#text ? `${this.#text} ${text}` : text;
     this.#unflushed += 1;
@@ -235,6 +239,6 @@ export class SpeechTurn {
   }
 
   #result(interrupted: boolean, heard: string): SpokenTurn {
-    return { id: this.id, text: this.#text, interrupted, heard, firstAudioAt: this.#firstAudioAt, characters: this.#chunks.reduce((n, c) => n + c.text.length, 0) };
+    return { id: this.id, text: this.#text, interrupted, heard, firstAudioAt: this.#firstAudioAt, ttsTtfbMs: this.#firstAudioAt !== null && this.#firstSpeakAt !== null ? Math.max(0, Math.round(this.#firstAudioAt - this.#firstSpeakAt)) : null, characters: this.#chunks.reduce((n, c) => n + c.text.length, 0) };
   }
 }
