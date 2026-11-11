@@ -5,6 +5,7 @@ import { ChatServerMessageSchema } from "@device-repair/shared/protocol/schemas"
 import type pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Database } from "../../src/db/pool.js";
+import { listTurnMetrics, upsertTurnMetric } from "../../src/db/repos/turnMetrics.js";
 import { insertRecord } from "../../src/db/repos/records.js";
 import { getSession } from "../../src/db/repos/sessions.js";
 import { listTimers } from "../../src/db/repos/timers.js";
@@ -282,6 +283,52 @@ describe("inbound messages (zod, protocol.md §3.4)", () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(socket.all()).toHaveLength(count);
     expect(socket.ws.readyState).toBe(socket.ws.OPEN);
+    socket.ws.close();
+  });
+});
+
+describe("clientMetric is stored (P11-T02)", () => {
+  const metricMessage = (turnId: string, ms: number) => JSON.stringify({ type: "clientMetric", name: "turnLatency", turnId, ms, at: "2026-11-07T10:02:14.512+05:30" });
+  const rowsOf = async (sessionId: string) => (await listTurnMetrics(db.pool, sessionId)).map((r) => [r.turnId, r.clientMs]);
+  const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  it("keeps the perceived latency of a turn of this session's call, and nothing for anyone else's turn or a non-agent id", async () => {
+    const mine = await seedSession(db.pool);
+    const other = await seedSession(db.pool);
+    await seedCall(db, mine, "c_mine");
+    await seedCall(db, other, "c_other");
+    const socket = await openChat(mine);
+
+    socket.ws.send(metricMessage("ta_c_mine_2", 1384.4));
+    for (let i = 0; i < 100 && (await rowsOf(mine)).length === 0; i++) await pause(20);
+    expect(await rowsOf(mine)).toEqual([["ta_c_mine_2", 1384]]);
+
+    await pause(1_100); // one clientMetric per second per socket (protocol.md §7)
+    socket.ws.send(metricMessage("ta_c_other_1", 900)); // a call of another session
+    await pause(1_100);
+    socket.ws.send(metricMessage("tu_c_mine_1", 900)); // a user line, not an agent turn
+    await pause(1_100);
+    socket.ws.send(metricMessage("ta_c_nowhere_1", 900)); // no such call
+    await pause(300);
+
+    expect(await rowsOf(other)).toEqual([]);
+    expect(await rowsOf(mine)).toEqual([["ta_c_mine_2", 1384]]);
+    expect(socket.ws.readyState).toBe(socket.ws.OPEN);
+    socket.ws.close();
+  });
+
+  it("merges with the server's row whichever arrives first, and an excess sample within a second is dropped", async () => {
+    const id = await seedSession(db.pool);
+    await seedCall(db, id, "c_merge");
+    const socket = await openChat(id);
+    socket.ws.send(metricMessage("ta_c_merge_1", 700));
+    socket.ws.send(metricMessage("ta_c_merge_2", 800)); // within the same second: dropped
+    for (let i = 0; i < 100 && (await rowsOf(id)).length === 0; i++) await pause(20);
+    await pause(200);
+    expect(await rowsOf(id)).toEqual([["ta_c_merge_1", 700]]);
+    // The server's numbers for that turn arrive later and join the same row.
+    await upsertTurnMetric(db.pool, { turnId: "ta_c_merge_1", sessionId: id, callId: "c_merge", userEndAt: new Date(), serverMs: 640 });
+    expect(await listTurnMetrics(db.pool, id)).toMatchObject([{ turnId: "ta_c_merge_1", clientMs: 700, serverMs: 640 }]);
     socket.ws.close();
   });
 });

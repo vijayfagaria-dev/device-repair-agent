@@ -12,6 +12,9 @@ import { ChatClientMessageType, type ChatServerMessage, CloseCode, CloseReason, 
 import { ChatClientMessageSchema, type ParsedChatClientMessage } from "@device-repair/shared/protocol/schemas";
 import type { FastifyBaseLogger, FastifyInstance } from "fastify";
 import type { WebSocket } from "ws";
+import { getCall } from "../db/repos/calls.js";
+import { upsertTurnMetric } from "../db/repos/turnMetrics.js";
+import { callIdOfTurn } from "../metrics/latency.js";
 import { type CommandProcessor, UnsupportedCommandError } from "../session/commands.js";
 import { STALE_REQUEST_MESSAGE, type SubmitChatInput, type SubmitChatInputReply } from "../session/handlers/chatInput.js";
 import type { SessionHub, SessionUpdate } from "../session/hub.js";
@@ -217,9 +220,25 @@ class ChatConnection {
         const now = Date.now();
         if (now - this.#lastMetricAt < CLIENT_METRIC_INTERVAL_MS) return; // excess dropped (protocol.md §7)
         this.#lastMetricAt = now;
-        this.#log.debug({ turnId: message.turnId, ms: message.ms }, "client metric received (stored from P11-T02)");
-        return;
+        return this.#storeClientMetric(message.turnId, message.ms);
       }
+    }
+  }
+
+  /**
+   * The browser's perceived latency for one agent turn (P11-T02). Kept only when the turn id names a call of this
+   * session (a client can't write into another session's turns); merged into the turn's row, whichever of the
+   * server's and the client's numbers arrives first. A storage error is logged, never sent to the client.
+   */
+  async #storeClientMetric(turnId: string, ms: number): Promise<void> {
+    const callId = callIdOfTurn(turnId);
+    if (callId === null) return;
+    try {
+      const call = await getCall(this.#deps.pool, callId);
+      if (call?.sessionId !== this.#sessionId) return;
+      await upsertTurnMetric(this.#deps.pool, { turnId, sessionId: this.#sessionId, callId, clientMs: Math.round(ms) });
+    } catch (err) {
+      this.#log.warn({ code: (err as { code?: string }).code, message: (err as Error).message }, "client metric not stored");
     }
   }
 
