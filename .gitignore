@@ -1,0 +1,23 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.sw?
+
+# Secrets: real values live only in local .env files and the host's secret store
+.env
+.env.*
+!.env.example
+
+# Dependencies, builds, local data
+node_modules/
+dist/
+coverage/
+data/
+*.db
+*.db-wal
+*.db-shm
+test-results/
+playwright-report/

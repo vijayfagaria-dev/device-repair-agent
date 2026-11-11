@@ -1,0 +1,34 @@
+{
+  "name": "@device-repair/shared",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./protocol": {
+      "source": "./protocol/index.ts",
+      "types": "./dist/protocol/index.d.ts",
+      "default": "./dist/protocol/index.js"
+    },
+    "./protocol/schemas": {
+      "source": "./protocol/schemas.ts",
+      "types": "./dist/protocol/schemas.d.ts",
+      "default": "./dist/protocol/schemas.js"
+    },
+    "./fields": {
+      "source": "./fields.ts",
+      "types": "./dist/fields.d.ts",
+      "default": "./dist/fields.js"
+    },
+    "./record.schema.json": "./record.schema.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  }
+}
