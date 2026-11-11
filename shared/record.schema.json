@@ -1,0 +1,1500 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://device-repair-agent.example/record.schema.json",
+  "title": "Device repair claim record",
+  "description": "The single sanitized, structured record produced when a claim session reaches an end state (schemaVersion 1.0). Each revision is immutable; a later revision is a new record.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sessionId",
+    "revision",
+    "outcome",
+    "outcomeReason",
+    "previousRevision",
+    "fields",
+    "missingRequired",
+    "conflicts",
+    "reviewFlags",
+    "submitConfirmation",
+    "engagement",
+    "costUsd",
+    "costBreakdownUsd",
+    "actualSpendUsd",
+    "createdAt",
+    "endedAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "sessionId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "outcome": {
+      "$ref": "#/$defs/outcome"
+    },
+    "outcomeReason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "previousRevision": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "revision",
+            "outcome"
+          ],
+          "properties": {
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "outcome": {
+              "$ref": "#/$defs/outcome"
+            }
+          }
+        }
+      ]
+    },
+    "fields": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "deviceType",
+        "deviceModel",
+        "problemDescription",
+        "problemStartedAt",
+        "urgency",
+        "serialNumber",
+        "purchaseInvoice",
+        "serviceCentre",
+        "email",
+        "additionalPhotos",
+        "additionalNotes"
+      ],
+      "properties": {
+        "deviceType": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "source",
+            "collectedAt",
+            "status"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/deviceType"
+                }
+              ]
+            },
+            "source": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/source"
+                }
+              ]
+            },
+            "collectedAt": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/timestamp"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "valid",
+                "invalid",
+                "missing"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "$ref": "#/$defs/fieldStatusRules"
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "valid",
+                      "unverified"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "value": {
+                    "$ref": "#/$defs/deviceType"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "deviceModel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "source",
+            "collectedAt",
+            "status"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/deviceModel"
+                }
+              ]
+            },
+            "source": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/source"
+                }
+              ]
+            },
+            "collectedAt": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/timestamp"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "valid",
+                "invalid",
+                "missing"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "$ref": "#/$defs/fieldStatusRules"
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "valid",
+                      "unverified"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "value": {
+                    "$ref": "#/$defs/deviceModel"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "problemDescription": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "source",
+            "collectedAt",
+            "status"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/problemDescription"
+                }
+              ]
+            },
+            "source": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/source"
+                }
+              ]
+            },
+            "collectedAt": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/timestamp"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "valid",
+                "invalid",
+                "missing"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "$ref": "#/$defs/fieldStatusRules"
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "valid",
+                      "unverified"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "value": {
+                    "$ref": "#/$defs/problemDescription"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "problemStartedAt": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "source",
+            "collectedAt",
+            "status"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/problemStartedAt"
+                }
+              ]
+            },
+            "source": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/source"
+                }
+              ]
+            },
+            "collectedAt": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/timestamp"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "valid",
+                "invalid",
+                "missing"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "$ref": "#/$defs/fieldStatusRules"
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "valid",
+                      "unverified"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "value": {
+                    "$ref": "#/$defs/problemStartedAt"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "urgency": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "source",
+            "collectedAt",
+            "status"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/urgency"
+                }
+              ]
+            },
+            "source": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/source"
+                }
+              ]
+            },
+            "collectedAt": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/timestamp"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "valid",
+                "invalid",
+                "missing"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "$ref": "#/$defs/fieldStatusRules"
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "valid",
+                      "unverified"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "value": {
+                    "$ref": "#/$defs/urgency"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "serialNumber": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "source",
+            "collectedAt",
+            "status"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/serialNumber"
+                }
+              ]
+            },
+            "source": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/source"
+                }
+              ]
+            },
+            "collectedAt": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/timestamp"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "valid",
+                "invalid",
+                "missing",
+                "unverified"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "$ref": "#/$defs/fieldStatusRules"
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "valid",
+                      "unverified"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "value": {
+                    "$ref": "#/$defs/serialNumber"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "const": "unverified"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "source": {
+                    "const": "call"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "purchaseInvoice": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "source",
+            "collectedAt",
+            "status"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/purchaseInvoice"
+                }
+              ]
+            },
+            "source": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/source"
+                }
+              ]
+            },
+            "collectedAt": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/timestamp"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "valid",
+                "invalid",
+                "missing"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "$ref": "#/$defs/fieldStatusRules"
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "valid",
+                      "unverified"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "value": {
+                    "$ref": "#/$defs/purchaseInvoice"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "serviceCentre": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "source",
+            "collectedAt",
+            "status"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/serviceCentre"
+                }
+              ]
+            },
+            "source": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/source"
+                }
+              ]
+            },
+            "collectedAt": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/timestamp"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "valid",
+                "invalid",
+                "missing"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "$ref": "#/$defs/fieldStatusRules"
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "valid",
+                      "unverified"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "value": {
+                    "$ref": "#/$defs/serviceCentre"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "email": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "source",
+            "collectedAt",
+            "status"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/email"
+                }
+              ]
+            },
+            "source": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/source"
+                }
+              ]
+            },
+            "collectedAt": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/timestamp"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "valid",
+                "invalid",
+                "missing",
+                "unverified"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "$ref": "#/$defs/fieldStatusRules"
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "valid",
+                      "unverified"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "value": {
+                    "$ref": "#/$defs/email"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "const": "unverified"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "source": {
+                    "const": "call"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "additionalPhotos": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "source",
+            "collectedAt",
+            "status"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/additionalPhotos"
+                }
+              ]
+            },
+            "source": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/source"
+                }
+              ]
+            },
+            "collectedAt": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/timestamp"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "valid",
+                "invalid",
+                "missing",
+                "skipped"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "$ref": "#/$defs/fieldStatusRules"
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "valid",
+                      "unverified"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "value": {
+                    "$ref": "#/$defs/additionalPhotos"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "additionalNotes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "source",
+            "collectedAt",
+            "status"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/additionalNotes"
+                }
+              ]
+            },
+            "source": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/source"
+                }
+              ]
+            },
+            "collectedAt": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/timestamp"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "valid",
+                "invalid",
+                "missing",
+                "skipped"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "$ref": "#/$defs/fieldStatusRules"
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "valid",
+                      "unverified"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "value": {
+                    "$ref": "#/$defs/additionalNotes"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "missingRequired": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "deviceType",
+          "deviceModel",
+          "problemDescription",
+          "problemStartedAt",
+          "urgency",
+          "serialNumber",
+          "purchaseInvoice",
+          "serviceCentre",
+          "email"
+        ]
+      },
+      "description": "Required fields that are not valid."
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "field",
+          "callValue",
+          "chatValue",
+          "resolution",
+          "reason"
+        ],
+        "properties": {
+          "field": {
+            "enum": [
+              "deviceType",
+              "deviceModel",
+              "problemDescription",
+              "problemStartedAt",
+              "urgency",
+              "serialNumber",
+              "purchaseInvoice",
+              "serviceCentre",
+              "email",
+              "additionalPhotos",
+              "additionalNotes"
+            ]
+          },
+          "callValue": {},
+          "chatValue": {},
+          "resolution": {
+            "enum": [
+              "callValue",
+              "chatValue",
+              "same"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          }
+        }
+      }
+    },
+    "reviewFlags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rule",
+          "reason"
+        ],
+        "properties": {
+          "rule": {
+            "enum": [
+              "R-1",
+              "R-2",
+              "R-3",
+              "R-4",
+              "R-5"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          }
+        }
+      }
+    },
+    "submitConfirmation": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "confirmed",
+            "source",
+            "at"
+          ],
+          "properties": {
+            "confirmed": {
+              "const": true
+            },
+            "source": {
+              "const": "chat"
+            },
+            "at": {
+              "$ref": "#/$defs/timestamp"
+            }
+          }
+        }
+      ]
+    },
+    "engagement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "calls",
+        "callSeconds",
+        "chatMessages",
+        "chatInputsSubmitted",
+        "invalidAttempts"
+      ],
+      "properties": {
+        "calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "callSeconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "chatMessages": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "chatInputsSubmitted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "invalidAttempts": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "costUsd": {
+      "type": "number",
+      "minimum": 0,
+      "description": "List-price equivalent of the session's provider usage (actual spend on free tiers is in actualSpendUsd)."
+    },
+    "costBreakdownUsd": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stt",
+        "llm",
+        "tts",
+        "vision"
+      ],
+      "properties": {
+        "stt": {
+          "type": "number",
+          "minimum": 0
+        },
+        "llm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "tts": {
+          "type": "number",
+          "minimum": 0
+        },
+        "vision": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "actualSpendUsd": {
+      "type": "number",
+      "minimum": 0
+    },
+    "createdAt": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "endedAt": {
+      "$ref": "#/$defs/timestamp"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "completed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "missingRequired": {
+            "type": "array",
+            "maxItems": 0
+          },
+          "reviewFlags": {
+            "type": "array",
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{1,3})?(?:Z|[+-][0-9]{2}:[0-9]{2})$",
+      "description": "ISO 8601 with offset (IST, +05:30)."
+    },
+    "outcome": {
+      "enum": [
+        "completed",
+        "partial",
+        "optedOut",
+        "needsReview"
+      ]
+    },
+    "source": {
+      "enum": [
+        "call",
+        "chat"
+      ]
+    },
+    "deviceType": {
+      "enum": [
+        "smartphone",
+        "laptop",
+        "tablet",
+        "smartwatch",
+        "headphones",
+        "other"
+      ]
+    },
+    "deviceModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "brand",
+        "model"
+      ],
+      "description": "brand and model both null: the user didn't know (accepted after one re-ask).",
+      "properties": {
+        "brand": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          ]
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          ]
+        }
+      }
+    },
+    "problemDescription": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "verbatim"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "verbatim": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        }
+      }
+    },
+    "problemStartedAt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "date",
+        "precision",
+        "spoken"
+      ],
+      "properties": {
+        "date": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "precision": {
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ]
+        },
+        "spoken": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          ]
+        }
+      }
+    },
+    "urgency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "reason"
+      ],
+      "properties": {
+        "level": {
+          "enum": [
+            "low",
+            "normal",
+            "high",
+            "critical"
+          ]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          ]
+        }
+      }
+    },
+    "serialNumber": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "value"
+          ],
+          "properties": {
+            "kind": {
+              "const": "imei"
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^[0-9]{15}$"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "value"
+          ],
+          "properties": {
+            "kind": {
+              "const": "serial"
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^[A-Z0-9]{8,20}$"
+            }
+          }
+        }
+      ]
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fileId",
+        "mime",
+        "size",
+        "sha256",
+        "url"
+      ],
+      "properties": {
+        "fileId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{8,64}$"
+        },
+        "mime": {
+          "enum": [
+            "application/pdf",
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+          ]
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10485760
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^https?://[^\\s]+$",
+          "maxLength": 2048,
+          "description": "Signed, expiring download URL (D10)."
+        }
+      }
+    },
+    "purchaseInvoice": {
+      "$ref": "#/$defs/file"
+    },
+    "serviceCentre": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "city"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]{1,64}$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "city": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        }
+      }
+    },
+    "email": {
+      "type": "string",
+      "maxLength": 254,
+      "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+    },
+    "additionalPhotos": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "items": {
+        "$ref": "#/$defs/file"
+      }
+    },
+    "additionalNotes": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "fieldStatusRules": {
+      "type": "object",
+      "description": "How value, source and collectedAt follow from status: valid/unverified carry a value; invalid/skipped carry only where and when; missing carries nothing.",
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "valid",
+                  "unverified"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "not": {
+                  "type": "null"
+                }
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              },
+              "collectedAt": {
+                "$ref": "#/$defs/timestamp"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "invalid",
+                  "skipped"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              },
+              "collectedAt": {
+                "$ref": "#/$defs/timestamp"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "missing"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              },
+              "source": {
+                "type": "null"
+              },
+              "collectedAt": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
