@@ -36,15 +36,6 @@ export function isAllowedOrigin(origin: string | undefined, publicOrigin: string
   return origin === publicOrigin;
 }
 
-// Render's proxy dropped the close code (the client saw 1005) when we closed right after the upgrade, so refusals
-// wait a moment before closing. Harmless locally.
-const REFUSE_DELAY_MS = 150;
-function refuse(socket: WebSocket, code: number, reason: string): void {
-  setTimeout(() => {
-    if (socket.readyState === socket.OPEN) socket.close(code, reason);
-  }, REFUSE_DELAY_MS);
-}
-
 /**
  * Runs the handshake on a freshly upgraded socket. Returns the session, or null after closing the socket with the
  * reason (or when the client went away during the handshake).
@@ -67,14 +58,14 @@ export async function acceptSessionSocket(
 
   if (!isAllowedOrigin(request.headers.origin, deps.publicOrigin)) {
     request.log.warn({ path: request.routeOptions.url }, "websocket refused: origin not allowed");
-    refuse(socket, CloseCode.ORIGIN_NOT_ALLOWED, CloseReason.ORIGIN_NOT_ALLOWED);
+    socket.close(CloseCode.ORIGIN_NOT_ALLOWED, CloseReason.ORIGIN_NOT_ALLOWED);
     return null;
   }
 
   const sessionId = parseSessionId((request.query as Record<string, unknown> | undefined)?.sessionId);
   if (!sessionId) {
     request.log.info({ path: request.routeOptions.url }, "websocket refused: invalid session id");
-    refuse(socket, CloseCode.INVALID_SESSION_ID, CloseReason.INVALID_SESSION_ID);
+    socket.close(CloseCode.INVALID_SESSION_ID, CloseReason.INVALID_SESSION_ID);
     return null;
   }
 
@@ -84,12 +75,12 @@ export async function acceptSessionSocket(
     result = await ensureSession(deps.pool, sessionId, { via, limit: { limiter: deps.sessionLimiter, key: request.ip }, newSession: deps.newSession });
   } catch (err) {
     log.error({ code: (err as { code?: string }).code, message: (err as Error).message }, "websocket refused: session lookup failed");
-    refuse(socket, CloseCode.SERVER_ERROR, CloseReason.SERVER_ERROR);
+    socket.close(CloseCode.SERVER_ERROR, CloseReason.SERVER_ERROR);
     return null;
   }
   if (!result.ok) {
     log.warn("websocket refused: new-session rate limit");
-    refuse(socket, CloseCode.RATE_LIMITED, CloseReason.NEW_SESSION_RATE_LIMITED);
+    socket.close(CloseCode.RATE_LIMITED, CloseReason.NEW_SESSION_RATE_LIMITED);
     return null;
   }
   if (result.created) log.info({ via }, "session created");
