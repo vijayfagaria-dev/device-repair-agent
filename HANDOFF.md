@@ -34,10 +34,9 @@ branch `main`). Deployed (TypeScript) at https://device-repair-agent.onrender.co
 | Agent + voice engine (LLM router, call engine, Deepgram) | `app/agent/ app/voice/` | committed, 160 tests |
 | Session layer (processor, handlers, hub) | `app/session/` | committed, 81 + 22 scenario tests |
 | Config, logging, quota guard, delivery worker, HTTP API | `app/config.py app/logging.py app/limits app/delivery app/api` | committed, 171 tests |
-| **WebSocket layer, sweeper, boot, main** (agent E2) | `app/ws app/jobs app/boot app/main.py app/__main__.py`, `tests/ws jobs boot chaos smoke` | **IN PROGRESS, uncommitted**: see `E2-PROGRESS.md` |
+| **WebSocket layer, sweeper, boot, main** (agent E2) | `app/ws app/jobs app/boot app/main.py app/__main__.py`, `tests/ws jobs boot chaos smoke` | **IN PROGRESS, committed as WIP (89a1f5d)**: see `E2-PROGRESS.md` (73 ws/jobs/boot tests pass; main.py not yet run end to end) |
 
-Last pushed commit when paused: `9ce635f`. Files added after it and not yet committed: `Dockerfile`, `.dockerignore`,
-`.handoff/render.yaml.new`, `HANDOFF.md`, `E2-PROGRESS.md` and E2's work. `Dockerfile` has never been built (no Docker
+Last pushed commit when paused: `89a1f5d` (everything is committed and pushed). `Dockerfile` has never been built (no Docker
 daemon access locally): CI must build it.
 
 ## Next steps, in order
