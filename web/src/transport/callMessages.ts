@@ -1,5 +1,6 @@
+import { latencyProbe } from "../audio/latencyProbe";
 import * as playback from "../audio/playback";
-import { CallServerMessageType, type CallServerMessage } from "@device-repair/shared/protocol";
+import { CallServerMessageType, type CallServerMessage, Role } from "@device-repair/shared/protocol";
 import type { Ui } from "../state/ui";
 import { parseMessage } from "./socket";
 
@@ -7,12 +8,16 @@ export function handleCallMessage(ui: Ui, data: unknown): void {
   const msg = parseMessage<CallServerMessage>(data);
   switch (msg?.type) {
     case CallServerMessageType.AUDIO:
-      playback.playPcm16(base64ToBytes(msg.data), msg.sampleRate && msg.sampleRate > 0 ? msg.sampleRate : undefined);
+      {
+        const startsInMs = playback.playPcm16(base64ToBytes(msg.data), msg.sampleRate && msg.sampleRate > 0 ? msg.sampleRate : undefined);
+        if (startsInMs !== null) latencyProbe.onAgentAudio(performance.now() + startsInMs);
+      }
       break;
     case CallServerMessageType.STOP_PLAYBACK:
       playback.stopPlayback();
       break;
     case CallServerMessageType.TRANSCRIPT:
+      if (msg.role === Role.AGENT && msg.id) latencyProbe.onAgentLine(msg.id);
       ui.addTranscript(msg);
       break;
     case CallServerMessageType.CLOSING:

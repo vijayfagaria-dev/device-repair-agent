@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { latencyProbe } from "../audio/latencyProbe";
 import * as mic from "../audio/mic";
 import type { Server } from "../config";
 import { callCloseMessage } from "../lib/closeCodes";
@@ -23,6 +24,7 @@ export function useCall(ui: Ui, server: Server | null): CallControls {
     if (wsRef.current) closeQuietly(wsRef.current);
     wsRef.current = null;
     mic.stopMic();
+    latencyProbe.reset();
   }, []);
 
   useEffect(() => release, [release]);
@@ -30,6 +32,7 @@ export function useCall(ui: Ui, server: Server | null): CallControls {
   const sendFrame = useCallback(
     (pcm: ArrayBuffer, level: number) => {
       ui.setLevel(level);
+      latencyProbe.onMicLevel(level, performance.now());
       const ws = wsRef.current;
       if (
         ws?.readyState === WebSocket.OPEN &&

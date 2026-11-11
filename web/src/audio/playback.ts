@@ -7,19 +7,20 @@ const PLAYBACK_LEAD_SECONDS = 0.05;
 let playhead = 0;
 const playing = new Set<AudioBufferSourceNode>();
 
+/** Queues the audio; returns how many ms from now it starts playing, or null when nothing was queued. */
 export function playPcm16(
   bytes: ArrayBuffer | Uint8Array,
   sampleRate = DEFAULT_PLAYBACK_RATE,
-): void {
+): number | null {
   const ctx = currentAudioContext();
-  if (!ctx) return;
+  if (!ctx) return null;
   const view = bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes;
   const samples = new Int16Array(
     view.buffer,
     view.byteOffset,
     view.byteLength >> 1,
   );
-  if (!samples.length) return;
+  if (!samples.length) return null;
 
   const floats = Float32Array.from(samples, (s) => s / 0x8000);
   const buffer = toAudioBuffer(ctx, floats, sampleRate);
@@ -27,10 +28,12 @@ export function playPcm16(
   src.buffer = buffer;
   src.connect(ctx.destination);
   playhead = Math.max(playhead, ctx.currentTime + PLAYBACK_LEAD_SECONDS);
+  const startsInMs = (playhead - ctx.currentTime) * 1000;
   src.start(playhead);
   playhead += buffer.duration;
   playing.add(src);
   src.onended = () => playing.delete(src);
+  return startsInMs;
 }
 
 export function stopPlayback(): void {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { registerMetricSink } from "../audio/latencyProbe";
 import type { Server } from "../config";
 import {
   ChatClientMessageType,
@@ -29,6 +30,7 @@ export function useChat(
     let retryDelay = FIRST_RETRY_MS;
     let ws: WebSocket | null = null;
     let timer: ReturnType<typeof setTimeout>;
+    let unregister: (() => void) | null = null;
 
     const retry = (code = 0) => {
       ui.setNotice(chatRetryNotice(code, url, Math.round(retryDelay / 1000)));
@@ -43,6 +45,11 @@ export function useChat(
         retry();
         return;
       }
+      const socket = ws;
+      // The latency probe's samples travel on this socket while it is open.
+      unregister = registerMetricSink((metric) => {
+        if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(metric));
+      });
       ws.onopen = () => {
         retryDelay = FIRST_RETRY_MS;
         ui.setNotice(null);
@@ -55,6 +62,7 @@ export function useChat(
         else handleChatMessage(ui, data, replay);
       };
       ws.onclose = (event) => {
+        unregister?.();
         const code = noticed ?? event.code;
         // 4400/4403 can't be fixed by reconnecting (protocol.md §6): stop and say why. Everything else retries.
         const permanent = permanentCloseNotice(code);
@@ -68,6 +76,7 @@ export function useChat(
     timer = setTimeout(connect, 0);
     return () => {
       clearTimeout(timer);
+      unregister?.();
       if (ws) closeQuietly(ws);
       wsRef.current = null;
     };
