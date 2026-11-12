@@ -40,7 +40,7 @@ Last pushed commit when paused: `89a1f5d` (everything is committed and pushed). 
 daemon access locally): CI must build it.
 
 ## Next steps, in order
-DONE: step 2 (verify) except the deferred tests below. Remaining before cutover: step 1 deferred tests (test_shutdown, boot process, chaos, smoke, scenarios, the skipped reconcile case), step 3 (UI smoke with real keys).
+DONE: step 2 (verify) except the deferred tests below. Remaining before cutover: step 1 deferred tests (test_shutdown DONE 6 tests; boot process, chaos, smoke, scenarios, the skipped reconcile case), step 3 (UI smoke with real keys).
 1. Read `E2-PROGRESS.md`; finish the WebSocket layer + sweeper + boot + `app/main.py` + `python -m app`; port the deferred
    tests (list in that file). Tip: spawn ONE agent per unfinished piece, with a tight brief pointing at `PORTING.md`.
 2. Verify: `uv run pytest tests -q` (starts a temp Postgres 18 automatically), `uv run ruff check app tests`, `uv run mypy app`.
