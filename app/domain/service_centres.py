@@ -4,6 +4,10 @@ business. The server's list is the only one trusted: the client's option values 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .fields import ServiceCentreValue
 
 
 @dataclass(frozen=True, slots=True)
@@ -12,7 +16,7 @@ class ServiceCentre:
     name: str
     city: str
 
-    def to_dict(self) -> dict[str, str]:
+    def to_dict(self) -> ServiceCentreValue:
         return {"id": self.id, "name": self.name, "city": self.city}
 
 
@@ -26,7 +30,7 @@ SERVICE_CENTRES: tuple[ServiceCentre, ...] = (
 )
 
 
-def find_service_centre(centre_id: str) -> dict[str, str] | None:
+def find_service_centre(centre_id: str) -> ServiceCentreValue | None:
     """A fresh copy of the centre as the record value ({id, name, city}), or None."""
     for centre in SERVICE_CENTRES:
         if centre.id == centre_id:

@@ -405,6 +405,11 @@ class AppServer(uvicorn.Server):
         await super().shutdown(sockets)
 
 
+def _app_keep_alive(app: FastAPI) -> KeepAliveOptions:
+    found: KeepAliveOptions | None = getattr(app.state, "keep_alive", None)
+    return found or CALL_KEEPALIVE
+
+
 def server_config(
     app: FastAPI,
     *,
@@ -422,7 +427,7 @@ def server_config(
         "access_log": False,
         "proxy_headers": False,
         "timeout_graceful_shutdown": 5,
-        **uvicorn_ws_options(keep_alive or getattr(app.state, "keep_alive", CALL_KEEPALIVE)),
+        **uvicorn_ws_options(keep_alive or _app_keep_alive(app)),
         **extra,
     }
     return uvicorn.Config(app, host=host, port=port, lifespan=lifespan, **settings)  # type: ignore[arg-type]

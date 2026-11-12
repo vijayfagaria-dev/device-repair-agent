@@ -8,7 +8,7 @@ are plain dicts with the wire's camelCase keys (validate them with ``app.protoco
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, TypeGuard
 
 from app.db.repos.events import SessionEvent
 from app.protocol.enums import Role
@@ -16,7 +16,7 @@ from app.protocol.enums import Role
 ChatWire = dict[str, Any]
 
 
-def _is_object(value: Any) -> bool:
+def _is_object(value: Any) -> TypeGuard[dict[str, Any]]:
     return isinstance(value, dict)
 
 

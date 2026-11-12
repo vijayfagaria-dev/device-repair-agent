@@ -34,12 +34,13 @@ branch `main`). Deployed (TypeScript) at https://device-repair-agent.onrender.co
 | Agent + voice engine (LLM router, call engine, Deepgram) | `app/agent/ app/voice/` | committed, 160 tests |
 | Session layer (processor, handlers, hub) | `app/session/` | committed, 81 + 22 scenario tests |
 | Config, logging, quota guard, delivery worker, HTTP API | `app/config.py app/logging.py app/limits app/delivery app/api` | committed, 171 tests |
-| **WebSocket layer, sweeper, boot, main** (agent E2) | `app/ws app/jobs app/boot app/main.py app/__main__.py`, `tests/ws jobs boot chaos smoke` | **IN PROGRESS, committed as WIP (89a1f5d)**: see `E2-PROGRESS.md` (73 ws/jobs/boot tests pass; main.py not yet run end to end) |
+| **WebSocket layer, sweeper, boot, main** | `app/ws app/jobs app/boot app/main.py app/__main__.py` | committed; 1049 tests pass, ruff + mypy clean; **verified 2026-11-12**: `python -m app` boots, migrates, serves; `scripts/check-api-examples.sh` 32/0; WS /chat handshake OK |
 
 Last pushed commit when paused: `89a1f5d` (everything is committed and pushed). `Dockerfile` has never been built (no Docker
 daemon access locally): CI must build it.
 
 ## Next steps, in order
+DONE: step 2 (verify) except the deferred tests below. Remaining before cutover: step 1 deferred tests (test_shutdown, boot process, chaos, smoke, scenarios, the skipped reconcile case), step 3 (UI smoke with real keys).
 1. Read `E2-PROGRESS.md`; finish the WebSocket layer + sweeper + boot + `app/main.py` + `python -m app`; port the deferred
    tests (list in that file). Tip: spawn ONE agent per unfinished piece, with a tight brief pointing at `PORTING.md`.
 2. Verify: `uv run pytest tests -q` (starts a temp Postgres 18 automatically), `uv run ruff check app tests`, `uv run mypy app`.

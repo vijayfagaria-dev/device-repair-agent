@@ -304,6 +304,6 @@ async def call_socket(socket: ManagedSocket, deps: CallSocketDeps, state: CallSt
                 log.warning("call frames dropped: faster than real time", dropped=dropped)
             return
         tokens -= 1
-        running.push_audio(bytes(data))
+        running.push_audio(data if isinstance(data, bytes) else data.encode("utf-8"))
 
     socket.on_message(on_message)

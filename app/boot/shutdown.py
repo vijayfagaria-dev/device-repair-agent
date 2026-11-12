@@ -91,8 +91,17 @@ def create_shutdown(deps: ShutdownDeps) -> Callable[[str], Awaitable[None]]:
     return shutdown
 
 
+_pending_shutdowns: set[asyncio.Future[None]] = set()
+
+
+def _start_shutdown(shutdown: Callable[[str], Awaitable[None]], name: str) -> None:
+    task = asyncio.ensure_future(shutdown(name))
+    _pending_shutdowns.add(task)
+    task.add_done_callback(_pending_shutdowns.discard)
+
+
 def install_signal_handlers(shutdown: Callable[[str], Awaitable[None]]) -> None:
     """SIGTERM (a deploy) and SIGINT (Ctrl-C) start the shutdown once."""
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGTERM, signal.SIGINT):
-        loop.add_signal_handler(sig, lambda s=sig: asyncio.ensure_future(shutdown(s.name)))
+        loop.add_signal_handler(sig, _start_shutdown, shutdown, sig.name)
