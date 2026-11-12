@@ -2,8 +2,6 @@
 
 > Ported to Python (FastAPI) from an earlier TypeScript prototype.
 
-[![CI](https://github.com/vijayfagaria-dev/device-repair-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/vijayfagaria-dev/device-repair-agent/actions/workflows/ci.yml)
-
 A customer reports a faulty device by **voice call** to an agent named Riya. Anything awkward to say aloud (serial number, invoice, email) arrives as a **card in the chat** on the same page while the call continues. If the call drops, the chat carries on from the same state. Every session ends in **one validated, versioned JSON record**, delivered to a webhook exactly once in effect.
 
 **Live demo:** https://device-repair-agent.onrender.com/
