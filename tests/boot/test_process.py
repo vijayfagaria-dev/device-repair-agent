@@ -33,11 +33,11 @@ def process_env(env: dict[str, str | None]) -> dict[str, str]:
     return base
 
 
-def server_env(database_url: str) -> dict[str, str | None]:
+def server_env(database_url: str, node_env: str = "test") -> dict[str, str | None]:
     return valid_env(
         HOST="127.0.0.1",
         PORT="0",
-        NODE_ENV="production",
+        NODE_ENV=node_env,
         PUBLIC_ORIGIN="https://repair.example.com",
         DATABASE_URL=database_url,
     )
@@ -151,7 +151,7 @@ class TestDatabase:
     async def test_migrates_an_empty_database_serves_the_ui_and_readiness_and_shuts_down_cleanly(
         self, empty_database_url: str
     ):
-        async with started(server_env(empty_database_url)) as server:
+        async with started(server_env(empty_database_url, "production")) as server:
             try:
                 log = migration_log(server.output())
                 assert log["applied"] == ["001_init"] and log["count"] == 1

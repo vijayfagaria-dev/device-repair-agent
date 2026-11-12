@@ -6,7 +6,7 @@ WORKDIR /build
 COPY package.json package-lock.json ./
 COPY shared/package.json shared/
 COPY web/package.json web/
-RUN npm ci --workspace shared --workspace web
+RUN npm ci
 COPY shared shared
 COPY web web
 RUN npm run build -w web
