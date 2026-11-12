@@ -17,6 +17,7 @@ from app.db.repos.timers import list_timers
 from app.session.ensure_session import NewSessionSettings, ensure_session
 from app.session.handlers.request_input import Reconcile, RequestInput, reconcile_active_sessions
 from app.session.handlers.timers import TimerFired
+from tests.helpers.app import connect, start_app, wait_for
 from tests.helpers.chat_flow import ANSWERS, answer_open, cards, chat_session, open_card, start_chat
 from tests.helpers.seed import seed_session
 from tests.helpers.session import SilentLog, end_seeded_call, seed_call, test_services
@@ -106,9 +107,25 @@ class TestTheCrashGap:
         lead = [e for e in await list_events(db.pool, id_) if e.type == "chat.message"][-1].payload["message"]["text"]
         assert lead.startswith("Thanks for the call. Let's finish the rest here in chat.")
 
-    @pytest.mark.skip(reason="needs the chat socket (app.ws, agent E): port with the transport tests")
-    async def test_a_chat_connect_reconciles_too_the_missing_card_arrives_live_after_sync_done(self) -> None:
-        """TS: reconcile.test.ts "a chat connect reconciles too" (startApp + connect helpers)."""
+    async def test_a_chat_connect_reconciles_too_the_missing_card_arrives_live_after_sync_done(
+        self, db, planner, crashed
+    ) -> None:
+        id_ = await call_ended_without_reaction(db, crashed)
+        server = await start_app(db, services=planner)
+        try:
+            socket = connect(f"{server.ws}/chat?sessionId={id_}")
+            await socket.opened
+            await wait_for(
+                lambda: any(m.get("type") == "inputRequest" for m in socket.messages), "the inputRequest message"
+            )
+            types = [m["type"] for m in socket.messages]
+            assert types.index("syncDone") < types.index("inputRequest")
+            request = next(m for m in socket.messages if m["type"] == "inputRequest")
+            assert request["id"] == "req_serialNumber_1"
+            assert request["field"] == "serialNumber"
+            await socket.close()
+        finally:
+            await server.close()
 
     async def test_boot_reconciliation_leaves_finalized_sessions_and_sessions_still_waiting_for_a_call_alone(
         self, db, planner
