@@ -40,7 +40,7 @@ Last pushed commit when paused: `89a1f5d` (everything is committed and pushed). 
 daemon access locally): CI must build it.
 
 ## Next steps, in order
-DONE: step 2 (verify) except the deferred tests below. Remaining before cutover: step 1 deferred tests (test_shutdown DONE 6 tests; boot process, chaos, smoke, scenarios, the skipped reconcile case), step 3 (UI smoke with real keys).
+DONE: step 2 (verify) except the deferred tests below. Remaining before cutover: step 1 deferred tests (test_shutdown + boot process tests DONE (1061 pass); chaos, smoke, scenarios, the skipped reconcile case), step 3 (UI smoke with real keys).
 1. Read `E2-PROGRESS.md`; finish the WebSocket layer + sweeper + boot + `app/main.py` + `python -m app`; port the deferred
    tests (list in that file). Tip: spawn ONE agent per unfinished piece, with a tight brief pointing at `PORTING.md`.
 2. Verify: `uv run pytest tests -q` (starts a temp Postgres 18 automatically), `uv run ruff check app tests`, `uv run mypy app`.
@@ -61,6 +61,8 @@ DONE: step 2 (verify) except the deferred tests below. Remaining before cutover:
    (`uv run python scripts/report.py` has to be ported from `server/scripts/report.ts` first; not done yet).
 
 ## Useful facts
+- Fixed on 2026-11-12 (found by the process tests): SIGTERM now exits 0 (uvicorn re-raised the signal, exit -15); an unreachable DB retries once, logs one line and exits 1 (was a traceback, exit 3).
+- A DATABASE_URL `options=-c search_path=` is NOT honoured by asyncpg: tests that spawn a server use a fresh database, not a schema.
 - Python 3.13, `uv`, asyncpg (SQL keeps `$1`), pydantic v2, structlog, pytest-asyncio (`asyncio_mode=auto`), ruff.
 - Local Postgres 18 from Homebrew is used by the tests; `TEST_DATABASE_URL` overrides. The live Neon DB URL is in `server/.env`
   (git-ignored). The live DB was wiped of session data on 2026-11-11 (authorised); 10 fresh sessions still have to be recorded.

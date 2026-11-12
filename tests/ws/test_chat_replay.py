@@ -257,9 +257,7 @@ class TestReplay:
         finally:
             await app.close()
 
-    async def test_a_replay_that_fails_closes_1011_the_client_retries_and_leaves_no_listener_behind(
-        self, db, services
-    ):
+    async def test_a_replay_that_fails_closes_1011_the_client_retries_and_leaves_no_listener_behind(self, db, services):
         id_ = await seed_session(db.pool)
 
         async def hook(text: str, _values: Any, phase: str) -> None:
@@ -408,7 +406,13 @@ class TestInboundMessages:
 
 def metric_message(turn_id: str, ms: float) -> str:
     return json.dumps(
-        {"type": "clientMetric", "name": "turnLatency", "turnId": turn_id, "ms": ms, "at": "2026-11-07T10:02:14.512+05:30"}
+        {
+            "type": "clientMetric",
+            "name": "turnLatency",
+            "turnId": turn_id,
+            "ms": ms,
+            "at": "2026-11-07T10:02:14.512+05:30",
+        }
     )
 
 

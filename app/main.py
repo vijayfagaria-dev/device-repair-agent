@@ -13,9 +13,14 @@ migrated database (``db=``). `build_app(...)` is the pure app (routes, sockets, 
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import logging
 import os
+import signal
 import sys
-from collections.abc import AsyncIterator, Callable
+import threading
+from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -30,8 +35,8 @@ from app.api.web import DEFAULT_WEB_DIST
 from app.boot.recover import recover_on_boot
 from app.boot.shutdown import ShutdownDeps, create_shutdown
 from app.config import Config, ConfigError, Secret, load_config
-from app.db.migrate import migrate_at_boot
-from app.db.pool import Database, create_database
+from app.db.migrate import BOOT_RETRY_DELAY_S, migrate_at_boot
+from app.db.pool import Database, create_database, is_transient_db_error
 from app.delivery.worker import OutboxWorker
 from app.files.signing import FileUrlSigner, create_file_url_signer
 from app.files.storage import DEFAULT_UPLOAD_BUDGET_BYTES
@@ -258,12 +263,7 @@ def create_app(
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         try:
             if owns_db:
-                opened = await create_database(
-                    cfg.database_url.reveal(),
-                    on_error=lambda err: logger.error(
-                        "idle database connection failed", code=getattr(err, "sqlstate", None), message=str(err)
-                    ),
-                )
+                opened = await _open_database(cfg, logger)
                 deferred.bind(opened.pool)
                 database.stats = opened.stats
             if run_migrations:
@@ -322,6 +322,27 @@ def create_app(
     app.state.config = cfg
     app.state.keep_alive = keep_alive or CALL_KEEPALIVE
     return app
+
+
+async def _open_database(cfg: Config, log: Any) -> Database:
+    """Opens the pool; one retry after a connection-level failure (Neon cold start), like the migrations."""
+
+    def open_pool() -> Any:
+        return create_database(
+            cfg.database_url.reveal(),
+            on_error=lambda err: log.error(
+                "idle database connection failed", code=getattr(err, "sqlstate", None), message=str(err)
+            ),
+        )
+
+    try:
+        return await open_pool()  # type: ignore[no-any-return]
+    except Exception as err:
+        if not is_transient_db_error(err):
+            raise
+        log.warning("database not reachable; retrying once", code=getattr(err, "sqlstate", None), message=str(err))
+        await asyncio.sleep(BOOT_RETRY_DELAY_S)
+        return await open_pool()  # type: ignore[no-any-return]
 
 
 async def _start_outbox(app: FastAPI, cfg: Config, database: Database, log: Any, components: dict[str, Any]) -> None:
@@ -388,6 +409,20 @@ class AppServer(uvicorn.Server):
         super().__init__(config)
         self._fastapi = app
 
+    @contextlib.contextmanager
+    def capture_signals(self) -> Iterator[None]:
+        """uvicorn's version, minus the re-raise of the captured signal once the server has stopped: that makes the process
+        die by SIGTERM (exit -15) after a clean shutdown, and a deploy would read it as a crash. We exit 0 instead."""
+        if threading.current_thread() is not threading.main_thread():
+            yield
+            return
+        original = {sig: signal.signal(sig, self.handle_exit) for sig in (signal.SIGINT, signal.SIGTERM)}
+        try:
+            yield
+        finally:
+            for sig, handler in original.items():
+                signal.signal(sig, handler)
+
     async def startup(self, sockets: Any = None) -> None:
         await super().startup(sockets)
         if self.started and self.servers:
@@ -433,6 +468,11 @@ def server_config(
     return uvicorn.Config(app, host=host, port=port, lifespan=lifespan, **settings)  # type: ignore[arg-type]
 
 
+def _drop_lifespan_traceback(record: logging.LogRecord) -> bool:
+    """A failed startup is already logged as one structured line; uvicorn's raw traceback would repeat it."""
+    return not record.getMessage().startswith("Exception in 'lifespan' protocol")
+
+
 def run(env: dict[str, str | None] | None = None) -> int:
     """Validates the configuration, builds the app and serves it until SIGTERM/SIGINT. Returns the exit code."""
     try:
@@ -445,11 +485,13 @@ def run(env: dict[str, str | None] | None = None) -> int:
         return 1
     log = create_logger(config.log_level)
     try:
+        logging.getLogger("uvicorn.error").addFilter(_drop_lifespan_traceback)
         app = create_app(config, log=log)
         server = AppServer(server_config(app, host=config.host, port=config.port), app)
         server.run()
     except SystemExit as exit_:
-        return int(exit_.code or 0) if isinstance(exit_.code, int) else 1
+        # uvicorn exits 3 when the lifespan (startup) failed; the app's contract is 1, after its own fatal log line.
+        return 0 if exit_.code in (0, None) else 1
     except Exception as err:
         log.fatal("server failed to start", err=repr(err))
         return 1

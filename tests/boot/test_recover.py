@@ -66,9 +66,7 @@ class TestRecoverOnBoot:
         # 2. A stale pointer: the call row already ended, the session still points at it.
         stale = await seed_session(db.pool)
         await insert_call(db.pool, id=f"s{stale[:8]}", session_id=stale)
-        await db.pool.execute(
-            "UPDATE calls SET ended_at = now(), end_reason = 'hangup' WHERE id = $1", f"s{stale[:8]}"
-        )
+        await db.pool.execute("UPDATE calls SET ended_at = now(), end_reason = 'hangup' WHERE id = $1", f"s{stale[:8]}")
         await db.pool.execute("UPDATE sessions SET active_call_id = $2 WHERE id = $1", stale, f"s{stale[:8]}")
 
         # 3. A call row with no end that its session doesn't point at.

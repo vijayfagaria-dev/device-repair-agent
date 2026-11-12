@@ -93,9 +93,7 @@ class TestStartingACall:
         rig.llm.enqueue(LlmScript(text="Hi, I'm Riya. What device is it?"))
         id_ = str(uuid.uuid4())
         socket = await open_call(id_, rig.server)
-        await wait_for(
-            lambda: any(kind(m) == "transcript" and m["final"] for m in socket.messages), "the greeting"
-        )
+        await wait_for(lambda: any(kind(m) == "transcript" and m["final"] for m in socket.messages), "the greeting")
         assert any(kind(m) == "audio" for m in socket.messages)
         session = await get_session(db.pool, id_)
         assert session is not None and session.active_call_id is not None
@@ -201,9 +199,7 @@ class TestStartingACall:
         finally:
             await no_voice.close()
 
-    async def test_applies_the_same_refusals_as_chat_origin_session_id_and_a_plain_get_call_is_the_json_404(
-        self, rig
-    ):
+    async def test_applies_the_same_refusals_as_chat_origin_session_id_and_a_plain_get_call_is_the_json_404(self, rig):
         foreign = connect(f"{rig.server.ws}/call?sessionId={uuid.uuid4()}", origin="https://evil.example.com")
         assert (await foreign.closed).code == 4403
         bad = connect(f"{rig.server.ws}/call?sessionId=nope")

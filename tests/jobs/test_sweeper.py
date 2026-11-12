@@ -260,9 +260,7 @@ class TestNoPolling:
         assert failures == 2
         await sweeper.stop()
 
-    async def test_stop_during_a_sweep_ends_it_after_the_timer_in_progress_not_after_the_whole_backlog(
-        self, rigs, db
-    ):
+    async def test_stop_during_a_sweep_ends_it_after_the_timer_in_progress_not_after_the_whole_backlog(self, rigs, db):
         clock = FakeClock(utc_ms(1975, 1, 1))
         own = await rigs.open()
         services = test_services(own, now=lambda: at(clock.now()))
