@@ -2,7 +2,7 @@ import * as mic from "../audio/mic";
 import { sessionId } from "../config";
 import { isoWithOffset, joinList } from "../lib/format";
 import { randomId } from "../lib/ids";
-import { ChatServerMessageType, FieldSource, FieldStatus, InputKind, Outcome, Role, type FinalRecord, type RecordField } from "@device-repair/shared/protocol";
+import { ChatServerMessageType, FieldSource, FieldStatus, InputKind, Outcome, Role, type FinalRecord, type RecordField } from "@voice-chat-agent/shared/protocol";
 import { CallState } from "../state/conversation";
 import type { CallControls, SendInput, Ui } from "../state/ui";
 import {

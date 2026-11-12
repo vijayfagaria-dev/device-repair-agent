@@ -1,6 +1,6 @@
 import { latencyProbe } from "../audio/latencyProbe";
 import * as playback from "../audio/playback";
-import { CallServerMessageType, type CallServerMessage, Role } from "@device-repair/shared/protocol";
+import { CallServerMessageType, type CallServerMessage, Role } from "@voice-chat-agent/shared/protocol";
 import type { Ui } from "../state/ui";
 import { parseMessage } from "./socket";
 

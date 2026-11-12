@@ -1,5 +1,5 @@
 // Zod schemas for the /chat messages (protocol.md §3.3–§3.4). The server validates every inbound message with these;
-// tests validate what the server sends. Exported as `@device-repair/shared/protocol/schemas`, not from the protocol
+// tests validate what the server sends. Exported as `@voice-chat-agent/shared/protocol/schemas`, not from the protocol
 // index, so the browser bundle never pulls in zod. The /call schemas come with P5-T02.
 import { z } from "zod";
 import { ChatClientMessageType, ChatServerMessageType, InputKind, Outcome, Role } from "./enums.js";

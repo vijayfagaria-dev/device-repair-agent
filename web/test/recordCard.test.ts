@@ -1,6 +1,6 @@
 // P6-T03 on the page: the record card appears in the thread when `record` arrives and is replaced in place (never
 // duplicated) when a later revision arrives, whether live or in a reconnect's replay.
-import { ChatServerMessageType, type FinalRecord, Outcome } from "@device-repair/shared/protocol";
+import { ChatServerMessageType, type FinalRecord, Outcome } from "@voice-chat-agent/shared/protocol";
 import { describe, expect, it, vi } from "vitest";
 import { ActionType, type Action } from "../src/state/actions";
 import { initialState, ThreadItemKind, type ConversationState } from "../src/state/conversation";

@@ -1,6 +1,6 @@
 // P11-T02: the client latency probe on a fake clock. Speech end = the start of ≥ 300 ms of quiet after speech;
 // the sample is taken at the first agent audio scheduled after it, once per utterance, joined by the turn id.
-import { ChatClientMessageType, type ClientMetric } from "@device-repair/shared/protocol";
+import { ChatClientMessageType, type ClientMetric } from "@voice-chat-agent/shared/protocol";
 import { describe, expect, it } from "vitest";
 import { LatencyProbe, MARK_TTL_MS, MIN_SPEECH_MS, QUIET_MS, SPEECH_LEVEL } from "../src/audio/latencyProbe";
 

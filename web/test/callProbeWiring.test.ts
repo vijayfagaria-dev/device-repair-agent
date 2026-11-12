@@ -1,5 +1,5 @@
 // P11-T02: the call socket's messages feed the probe, and a sample leaves through the sink useChat registers.
-import { CallServerMessageType, type ClientMetric, Role } from "@device-repair/shared/protocol";
+import { CallServerMessageType, type ClientMetric, Role } from "@voice-chat-agent/shared/protocol";
 import { describe, expect, it, vi } from "vitest";
 import type { Ui } from "../src/state/ui";
 

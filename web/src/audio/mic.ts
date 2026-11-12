@@ -1,4 +1,4 @@
-import { MIC_FRAME_MS, MIC_SAMPLE_RATE } from "@device-repair/shared/protocol";
+import { MIC_FRAME_MS, MIC_SAMPLE_RATE } from "@voice-chat-agent/shared/protocol";
 import { CAPTURE_PROCESSOR, type CaptureFrame, type CaptureOptions } from "./capture";
 import { closeAudioContext, currentAudioContext, openAudioContext } from "./context";
 import { stopPlayback } from "./playback";

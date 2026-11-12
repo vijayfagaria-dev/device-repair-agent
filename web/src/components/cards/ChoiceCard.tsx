@@ -2,7 +2,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { useFocusOnOpen } from "../../hooks/useFocusOnOpen";
 import { choiceAnswer, multiSelectAnswer, singleChoices } from "../../lib/answers";
 import { labelId } from "../../lib/inputs";
-import { InputKind } from "@device-repair/shared/protocol";
+import { InputKind } from "@voice-chat-agent/shared/protocol";
 import type { Answer, OpenCard } from "../../state/conversation";
 import { Prompt } from "../thread/Prompt";
 import { ErrorLine } from "./ErrorLine";

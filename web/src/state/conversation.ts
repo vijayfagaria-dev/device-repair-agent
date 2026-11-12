@@ -1,4 +1,4 @@
-import type { FinalRecord, InputRequest, InputValue, Role, SessionStatus } from "@device-repair/shared/protocol";
+import type { FinalRecord, InputRequest, InputValue, Role, SessionStatus } from "@voice-chat-agent/shared/protocol";
 
 export enum CallState {
   IDLE = "idle",

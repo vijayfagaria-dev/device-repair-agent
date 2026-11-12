@@ -1,7 +1,7 @@
 // P4-T05/T06 on the page: a server card pre-empts the one shown (the Stop flow) and the paused card comes back when
 // the server resumes it; the session's status gates the Stop button; close codes and upload errors read as plain
 // sentences; the copy-link button copies the page's own session link.
-import { ChatServerMessageType, InputKind, type InputRequest } from "@device-repair/shared/protocol";
+import { ChatServerMessageType, InputKind, type InputRequest } from "@voice-chat-agent/shared/protocol";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { callCloseMessage, chatRetryNotice, sessionLink } from "../src/lib/closeCodes";
 import { ActionType, type Action } from "../src/state/actions";

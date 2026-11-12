@@ -1,7 +1,7 @@
 // P3-T06: the starter handles the replay on /chat. Replayed transcript lines, messages and cards render once (deduped by
 // id, so a reconnect without a reload adds nothing), replayed answers show as user bubbles, sessionState becomes the
 // header notice, and syncDone is accepted silently.
-import { CallServerMessageType, ChatServerMessageType, InputKind, type InputRequest, Role } from "@device-repair/shared/protocol";
+import { CallServerMessageType, ChatServerMessageType, InputKind, type InputRequest, Role } from "@voice-chat-agent/shared/protocol";
 import { describe, expect, it, vi } from "vitest";
 import { permanentCloseNotice, sessionNotice } from "../src/lib/sessionState";
 import { ActionType, type Action } from "../src/state/actions";

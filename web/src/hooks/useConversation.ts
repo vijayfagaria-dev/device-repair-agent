@@ -3,7 +3,7 @@ import { errorMessage } from "../lib/errors";
 import { clockTime } from "../lib/format";
 import { nextKey } from "../lib/ids";
 import { sessionNotice } from "../lib/sessionState";
-import type { InputRequest } from "@device-repair/shared/protocol";
+import type { InputRequest } from "@voice-chat-agent/shared/protocol";
 import { ActionType } from "../state/actions";
 import { isInCall, selectOpenCard, type Answer, type ConversationState } from "../state/conversation";
 import { setMicLevel } from "../state/micLevel";

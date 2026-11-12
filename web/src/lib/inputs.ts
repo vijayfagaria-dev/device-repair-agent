@@ -1,4 +1,4 @@
-import { InputKind, type InputRequest } from "@device-repair/shared/protocol";
+import { InputKind, type InputRequest } from "@voice-chat-agent/shared/protocol";
 
 const CHOICE_KINDS: ReadonlySet<InputKind> = new Set([InputKind.SELECT, InputKind.MULTI_SELECT, InputKind.CONFIRM]);
 

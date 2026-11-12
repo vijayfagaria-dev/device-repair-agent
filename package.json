@@ -1,5 +1,5 @@
 {
-  "name": "device-repair-agent",
+  "name": "voice-chat-agent",
   "private": true,
   "type": "module",
   "workspaces": [

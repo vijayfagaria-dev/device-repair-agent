@@ -1,4 +1,4 @@
-import type { Role } from "@device-repair/shared/protocol";
+import type { Role } from "@voice-chat-agent/shared/protocol";
 import { Stamp } from "./Stamp";
 
 interface Props {

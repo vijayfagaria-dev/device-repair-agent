@@ -3,6 +3,7 @@
 # the Blueprint is first created, and `generateValue` variables are random values Render creates itself.
 services:
   - type: web
+    # The service keeps its original name so the public URL stays https://device-repair-agent.onrender.com.
     name: device-repair-agent
     runtime: docker
     dockerfilePath: ./Dockerfile

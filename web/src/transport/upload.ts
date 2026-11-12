@@ -1,6 +1,6 @@
 import { sessionId, type Server } from "../config";
 import { errorMessage } from "../lib/errors";
-import type { InputValue, UploadResponse } from "@device-repair/shared/protocol";
+import type { InputValue, UploadResponse } from "@voice-chat-agent/shared/protocol";
 
 export async function uploadFiles(server: Server, files: File[], multiple: boolean): Promise<InputValue> {
   const urls: string[] = [];

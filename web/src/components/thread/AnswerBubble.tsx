@@ -1,4 +1,4 @@
-import type { InputRequest } from "@device-repair/shared/protocol";
+import type { InputRequest } from "@voice-chat-agent/shared/protocol";
 import type { Answer } from "../../state/conversation";
 import { FileRow } from "./FileRow";
 import { Stamp } from "./Stamp";

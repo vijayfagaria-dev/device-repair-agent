@@ -1,5 +1,5 @@
 import { todayAt } from "../lib/format";
-import { InputKind, type InputRequest } from "@device-repair/shared/protocol";
+import { InputKind, type InputRequest } from "@voice-chat-agent/shared/protocol";
 
 export type CardSpec = Omit<InputRequest, "type">;
 

@@ -1,4 +1,4 @@
-import type { ChatMessage, FinalRecord, InputRequest, SessionStatus, TranscriptMessage } from "@device-repair/shared/protocol";
+import type { ChatMessage, FinalRecord, InputRequest, SessionStatus, TranscriptMessage } from "@voice-chat-agent/shared/protocol";
 import type { Answer, CallState } from "./conversation";
 
 export enum ActionType {

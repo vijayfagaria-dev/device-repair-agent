@@ -18,7 +18,7 @@ import structlog
 
 from app.config import REDACTED, LogLevel, Secret
 
-SERVICE_NAME = "device-repair-agent"
+SERVICE_NAME = "voice-chat-agent"
 
 #: Keys whose values are never logged (compared exactly, as pino's redact paths were). The snake_case spellings are
 #: there because Python code logs `api_key`, not `apiKey`.

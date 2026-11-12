@@ -1,4 +1,4 @@
-import { InputKind, type InputRequest, type InputValue } from "@device-repair/shared/protocol";
+import { InputKind, type InputRequest, type InputValue } from "@voice-chat-agent/shared/protocol";
 import type { Answer } from "../state/conversation";
 import { matchesAccept } from "./files";
 

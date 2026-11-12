@@ -1,4 +1,4 @@
-import { FieldStatus } from "@device-repair/shared/protocol";
+import { FieldStatus } from "@voice-chat-agent/shared/protocol";
 
 export const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);

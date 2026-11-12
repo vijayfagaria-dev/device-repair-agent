@@ -1,5 +1,5 @@
 import { isPlainObject } from "../../lib/record";
-import type { FinalRecord } from "@device-repair/shared/protocol";
+import type { FinalRecord } from "@voice-chat-agent/shared/protocol";
 import { FieldList } from "./FieldList";
 
 export function RecordCard({ record }: { record: FinalRecord }) {

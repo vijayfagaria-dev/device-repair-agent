@@ -1,4 +1,4 @@
-import { ChatServerMessageType, type ChatServerMessage } from "@device-repair/shared/protocol";
+import { ChatServerMessageType, type ChatServerMessage } from "@voice-chat-agent/shared/protocol";
 import type { Ui } from "../state/ui";
 import { parseMessage } from "./socket";
 

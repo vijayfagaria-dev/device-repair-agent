@@ -4,7 +4,7 @@ import * as mic from "../audio/mic";
 import type { Server } from "../config";
 import { callCloseMessage } from "../lib/closeCodes";
 import { errorMessage } from "../lib/errors";
-import { MIC_FRAME_BYTES, MIC_FRAME_MS } from "@device-repair/shared/protocol";
+import { MIC_FRAME_BYTES, MIC_FRAME_MS } from "@voice-chat-agent/shared/protocol";
 import { CallState } from "../state/conversation";
 import type { CallControls, Ui } from "../state/ui";
 import { handleCallMessage } from "../transport/callMessages";

@@ -311,7 +311,7 @@ wheels = [
 ]
 
 [[package]]
-name = "device-repair-agent"
+name = "voice-chat-agent"
 version = "1.0.0"
 source = { editable = "." }
 dependencies = [

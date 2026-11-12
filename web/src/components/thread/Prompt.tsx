@@ -1,5 +1,5 @@
 import { inputId, isChoiceKind, labelId } from "../../lib/inputs";
-import type { InputRequest } from "@device-repair/shared/protocol";
+import type { InputRequest } from "@voice-chat-agent/shared/protocol";
 
 export function Prompt({ spec }: { spec: InputRequest }) {
   const text = spec.label || spec.field || "Input";

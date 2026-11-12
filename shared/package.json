@@ -1,5 +1,5 @@
 {
-  "name": "@device-repair/shared",
+  "name": "@voice-chat-agent/shared",
   "private": true,
   "version": "0.0.0",
   "type": "module",

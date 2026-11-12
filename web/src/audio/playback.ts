@@ -1,4 +1,4 @@
-import { DEFAULT_PLAYBACK_RATE } from "@device-repair/shared/protocol";
+import { DEFAULT_PLAYBACK_RATE } from "@voice-chat-agent/shared/protocol";
 import { currentAudioContext } from "./context";
 
 // How far ahead of "now" playback restarts after the queue ran dry, so the first chunk isn't clipped.

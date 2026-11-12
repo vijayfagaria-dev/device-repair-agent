@@ -5,7 +5,7 @@ import {
   ChatClientMessageType,
   InputKind,
   type InputResponse,
-} from "@device-repair/shared/protocol";
+} from "@voice-chat-agent/shared/protocol";
 import type { SendInput, Ui } from "../state/ui";
 import { chatRetryNotice } from "../lib/closeCodes";
 import { permanentCloseNotice } from "../lib/sessionState";

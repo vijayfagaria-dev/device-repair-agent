@@ -1,4 +1,4 @@
-import type { ChatMessage, FinalRecord, InputRequest, InputValue, SessionStateMessage, TranscriptMessage } from "@device-repair/shared/protocol";
+import type { ChatMessage, FinalRecord, InputRequest, InputValue, SessionStateMessage, TranscriptMessage } from "@voice-chat-agent/shared/protocol";
 import type { CallState } from "./conversation";
 
 export interface Ui {

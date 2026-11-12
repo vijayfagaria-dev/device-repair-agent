@@ -1,4 +1,4 @@
-import type { SessionStateMessage } from "@device-repair/shared/protocol";
+import type { SessionStateMessage } from "@voice-chat-agent/shared/protocol";
 
 /**
  * The header notice for a `sessionState` (protocol.md §3.3): the server's own notice first ("The call was

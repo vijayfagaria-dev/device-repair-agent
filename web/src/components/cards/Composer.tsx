@@ -3,7 +3,7 @@ import { useFocusOnOpen } from "../../hooks/useFocusOnOpen";
 import { fileAnswer, textAnswer } from "../../lib/answers";
 import { prefillFileInput } from "../../lib/files";
 import { INPUT_TYPES, inputId } from "../../lib/inputs";
-import { InputKind } from "@device-repair/shared/protocol";
+import { InputKind } from "@voice-chat-agent/shared/protocol";
 import type { Answer, OpenCard } from "../../state/conversation";
 import { ClipIcon } from "../icons";
 import { ErrorLine } from "./ErrorLine";

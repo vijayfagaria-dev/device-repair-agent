@@ -68,9 +68,7 @@ async def _apply_one(pool: asyncpg.Pool, migration: Migration) -> bool:
     async with pool.acquire() as conn, conn.transaction():
         await conn.execute(f"SET LOCAL statement_timeout = '{MIGRATION_STATEMENT_TIMEOUT}'")
         # Keyed by schema, so separate schemas (one per test) migrate independently.
-        await conn.execute(
-            "SELECT pg_advisory_xact_lock(hashtext('device-repair-agent:migrations:' || current_schema()))"
-        )
+        await conn.execute("SELECT pg_advisory_xact_lock(hashtext('voice-chat-agent:migrations:' || current_schema()))")
         await conn.execute(
             """CREATE TABLE IF NOT EXISTS schema_migrations (
                  version integer PRIMARY KEY,

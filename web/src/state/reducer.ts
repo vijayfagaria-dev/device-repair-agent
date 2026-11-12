@@ -1,5 +1,5 @@
 import { isChoiceKind } from "../lib/inputs";
-import { Role } from "@device-repair/shared/protocol";
+import { Role } from "@voice-chat-agent/shared/protocol";
 import { ActionType, type Action, type ActionOf } from "./actions";
 import { CallState, CardStatus, ThreadItemKind, type ConversationState, type ThreadItem } from "./conversation";
 

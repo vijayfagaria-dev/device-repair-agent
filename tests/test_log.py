@@ -66,7 +66,7 @@ def test_writes_one_json_object_per_line_with_an_iso_timestamp() -> None:
     logger, stream = capture()
     logger.warning("hello")
     line = parsed(stream)[0]
-    assert (line["level"], line["msg"], line["service"]) == ("warn", "hello", "device-repair-agent")
+    assert (line["level"], line["msg"], line["service"]) == ("warn", "hello", "voice-chat-agent")
     assert re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$", line["time"])
 
 

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://device-repair-agent.example/record.schema.json",
+  "$id": "https://voice-chat-agent.example/record.schema.json",
   "title": "Device repair claim record",
   "description": "The single sanitized, structured record produced when a claim session reaches an end state (schemaVersion 1.0). Each revision is immutable; a later revision is a new record.",
   "type": "object",

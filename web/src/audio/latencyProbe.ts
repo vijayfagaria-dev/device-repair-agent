@@ -2,7 +2,7 @@
 // first audio is *scheduled to play*. A secondary number, reported separately from the server's: it hears the room,
 // so an echo from speakers (no headphones) or a noisy mic can fake a speech end. It is only a sample; the server joins
 // it to the turn by id and the report says how it was taken.
-import { ChatClientMessageType, type ClientMetric } from "@device-repair/shared/protocol";
+import { ChatClientMessageType, type ClientMetric } from "@voice-chat-agent/shared/protocol";
 
 /** Mic RMS (0..1) at or above this counts as speech. */
 export const SPEECH_LEVEL = 0.02;

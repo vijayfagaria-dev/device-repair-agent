@@ -1,5 +1,5 @@
 [project]
-name = "device-repair-agent"
+name = "voice-chat-agent"
 version = "1.0.0"
 description = "Voice and chat agent that registers a device repair claim"
 readme = "README.md"

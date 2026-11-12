@@ -1,5 +1,5 @@
 // web/src/config.ts reads the page URL once at import, so each case stubs `location`/`history` and re-imports it.
-import { parseSessionId } from "@device-repair/shared/protocol";
+import { parseSessionId } from "@voice-chat-agent/shared/protocol";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 function openPage(url: string): ReturnType<typeof vi.fn> {

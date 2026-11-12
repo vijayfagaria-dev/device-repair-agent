@@ -68,7 +68,7 @@ async def create_database(
     """Opens the pool. `schema` sets the search_path (one schema per test)."""
     dsn, ssl = connection_settings(connection_string)
     stats = PoolStats()
-    server_settings: dict[str, str] = {"application_name": "device-repair-agent", "statement_timeout": str(TIMEOUT_MS)}
+    server_settings: dict[str, str] = {"application_name": "voice-chat-agent", "statement_timeout": str(TIMEOUT_MS)}
     if schema:
         server_settings["search_path"] = schema
 
