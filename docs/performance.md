@@ -1,12 +1,12 @@
 # Cost and latency
 
 <!-- measured:start -->
-> **`PENDING`: no measurement from real sessions exists yet.** The tooling is built and tested (`server/scripts/report.ts`), but a report needs at least 10 completed real sessions and at least 50 voice turns. No cost or latency figure is claimed until it has run on the deployed system.
+> **`PENDING`: no measurement from real sessions exists yet.** The tooling is built and tested (`scripts/report.py`), but a report needs at least 10 completed real sessions and at least 50 voice turns. No cost or latency figure is claimed until it has run on the deployed system.
 <!-- measured:end -->
 
 ## Cost
 
-**How cost is worked out.** Every billable unit is a row in a usage ledger, priced when inserted at the provider's published paid list price (`server/src/metrics/prices.ts`, each entry with its source URL and the date it was read, 2026-11-10). Actual spend is **$0** because every provider is on a free tier; the reported figure is the **list-price equivalent**:
+**How cost is worked out.** Every billable unit is a row in a usage ledger, priced when inserted at the provider's published paid list price (`app/metrics/prices.py`, each entry with its source URL and the date it was read, 2026-11-10). Actual spend is **$0** because every provider is on a free tier; the reported figure is the **list-price equivalent**:
 
 | Meter | List price used |
 |---|---|
@@ -25,4 +25,4 @@ Assumptions that move the number: Groq lists no cached-input rate, so cached tok
 
 **What exists today** (a spike, not a measurement of this system): a laptop on home Wi-Fi in India, 20 runs of the same pipeline per variant, speech end to first audio byte, measured against the providers directly: **1,656 ms p50 / 1,768 ms p95** with the acknowledge-then-ask design, versus 2,311 / 2,513 ms when waiting for the model's follow-up speech. These include two round trips from the laptop to Deepgram that the deployed server will not have; the spike's own conservative estimate for the deployed system is about 1.3–1.4 s p50. **That estimate is not a measurement.**
 
-To produce the real numbers once deployed: run the sessions, then `DATABASE_URL=<Neon URL> npm run report -w server -- --region "…" --browsers "…" --headphones yes` (see `server/scripts/report.ts`). It reads the database in a read-only transaction.
+To produce the real numbers once deployed: run the sessions, then `DATABASE_URL=<Neon URL> uv run python scripts/report.py --region "…" --browsers "…" --headphones yes`. It reads the database in a read-only transaction.

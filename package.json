@@ -4,25 +4,19 @@
   "type": "module",
   "workspaces": [
     "shared",
-    "web",
-    "server"
+    "web"
   ],
   "engines": {
     "node": ">=22.18.0 <23"
   },
   "scripts": {
     "build": "npm run build --workspaces",
-    "typecheck": "npm run build -w shared && npm run typecheck --workspaces && tsc -p e2e",
+    "typecheck": "npm run build -w shared && npm run typecheck --workspaces",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "lint": "biome lint .",
-    "start": "npm run start -w server",
-    "e2e": "npm run build && playwright test"
+    "lint": "biome lint web shared"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.6",
-    "@playwright/test": "1.65.0",
-    "@vitest/coverage-v8": "5.1.0",
     "vite": "8.3.5",
     "vitest": "5.1.0"
   }

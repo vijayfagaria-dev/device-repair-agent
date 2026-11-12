@@ -33,7 +33,7 @@ The record's shape is defined by [`shared/record.schema.json`](shared/record.sch
 
 ## Validation and normalization
 
-Pure functions in `server/src/domain` run on every candidate from either channel, in the Asia/Kolkata time zone:
+Pure functions in `app/domain` run on every candidate from either channel, in the Asia/Kolkata time zone:
 
 | Field | Valid when | Normalized to |
 |---|---|---|

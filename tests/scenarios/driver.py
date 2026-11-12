@@ -49,29 +49,33 @@ IMMUTABLE = ["events", "field_candidates", "records"]
 
 
 async def check_invariants(db: Database, session_id: str) -> None:
-    session = await get_session(db.pool, session_id)
+    # One snapshot for every read: a command committing between two queries must not look like a broken invariant.
+    async with db.pool.acquire() as conn, conn.transaction(isolation="repeatable_read", readonly=True):
+        await _check_snapshot(conn, session_id)
+    await _check_append_only(db)
+
+
+async def _check_snapshot(db: Any, session_id: str) -> None:
+    session = await get_session(db, session_id)
     assert session is not None, "the session exists"
     # At most one open card, and the session points at it.
     open_ids = [
         r["id"]
-        for r in await db.pool.fetch(
-            "SELECT id FROM input_requests WHERE session_id = $1 AND status = 'open'", session_id
-        )
+        for r in await db.fetch("SELECT id FROM input_requests WHERE session_id = $1 AND status = 'open'", session_id)
     ]
     assert len(open_ids) <= 1, "at most one open card"
     assert session.open_request_id == (open_ids[0] if open_ids else None), "open_request_id matches the open card"
     # At most one running call, and the session points at it.
     running = [
-        r["id"]
-        for r in await db.pool.fetch("SELECT id FROM calls WHERE session_id = $1 AND ended_at IS NULL", session_id)
+        r["id"] for r in await db.fetch("SELECT id FROM calls WHERE session_id = $1 AND ended_at IS NULL", session_id)
     ]
     assert len(running) <= 1, "at most one running call"
     assert session.active_call_id == (running[0] if running else None), "active_call_id matches the running call"
     # Events are contiguous from 1: nothing lost, nothing reordered.
-    seqs = [e.seq for e in await list_events(db.pool, session_id)]
+    seqs = [e.seq for e in await list_events(db, session_id)]
     assert seqs == list(range(1, len(seqs) + 1)), "event seq contiguous"
     # Records: contiguous revisions, schema-valid and sanitized, one outbox row each, the session agrees.
-    records = await list_records(db.pool, session_id)
+    records = await list_records(db, session_id)
     assert [r.revision for r in records] == list(range(1, len(records) + 1)), "revisions contiguous"
     for record in records:
         validate_record(record.payload)
@@ -79,11 +83,14 @@ async def check_invariants(db: Database, session_id: str) -> None:
         assert record.payload["revision"] == record.revision
         assert record.payload["sessionId"] == session_id
     assert session.current_revision == len(records), "current_revision is the latest revision"
-    assert [o.revision for o in await list_outbox(db.pool, session_id)] == [r.revision for r in records], (
+    assert [o.revision for o in await list_outbox(db, session_id)] == [r.revision for r in records], (
         "one outbox row per revision"
     )
     if session.status == "finalized":
         assert session.outcome is not None, "a finalized session has an outcome"
+
+
+async def _check_append_only(db: Database) -> None:
     # History cannot be rewritten.
     for table in IMMUTABLE:
         try:

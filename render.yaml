@@ -4,21 +4,18 @@
 services:
   - type: web
     name: device-repair-agent
-    runtime: node
+    runtime: docker
+    dockerfilePath: ./Dockerfile
     plan: free
     region: virginia
     # Deploy a commit only after its CI run (lint, typecheck, tests, build, gitleaks) has passed.
     autoDeployTrigger: checksPass
-    # NODE_ENV=production is set below, so dev dependencies (TypeScript, Vite) must be included explicitly to build; they
-    # are pruned afterwards, so only the server's runtime dependencies are on the instance (checked: the pruned install
-    # boots; P10-T01).
-    buildCommand: npm ci --include=dev && npm run build && npm prune --omit=dev
-    # Migrations run before the server binds its port, so a deploy whose database is unreachable never passes the check.
-    startCommand: npm start
+    # The image's CMD starts the server; migrations run before it accepts traffic, so a deploy whose database is
+    # unreachable never passes the health check.
     # Render probes this every few seconds for as long as the service runs, so it must not touch the database:
     # /readyz would keep Neon's compute awake around the clock and exhaust the free compute budget (D09).
     healthCheckPath: /healthz
-    # Shutdown: on SIGTERM the server stops within 10 s (server/src/boot/shutdown.ts). Render's documented default
+    # Shutdown: on SIGTERM the server stops within 10 s (app/boot/shutdown.py). Render's documented default
     # grace period is 30 s (docs: render.com/docs/deploys, checked 2026-11-10), so it is not set here:
     # `maxShutdownDelaySeconds` exists, but the docs don't say whether free services may change it.
     envVars:

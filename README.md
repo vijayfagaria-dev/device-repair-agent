@@ -1,5 +1,7 @@
 # Device Repair Claim Agent
 
+> Ported to Python (FastAPI) from an earlier TypeScript prototype.
+
 [![CI](https://github.com/vijayfagaria-dev/device-repair-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/vijayfagaria-dev/device-repair-agent/actions/workflows/ci.yml)
 
 A customer reports a faulty device by **voice call** to an agent named Riya. Anything awkward to say aloud (serial number, invoice, email) arrives as a **card in the chat** on the same page while the call continues. If the call drops, the chat carries on from the same state. Every session ends in **one validated, versioned JSON record**, delivered to a webhook exactly once in effect.
@@ -13,7 +15,7 @@ A customer reports a faulty device by **voice call** to an agent named Riya. Any
 Browser (React) ──WS /call  mic audio in, agent audio + transcript out
                 └─WS /chat  cards, messages, final record
         │
-Server (Node 22, Fastify, one process)
+Server (Python 3.13, FastAPI + uvicorn, one process)
   Call engine:  speech-to-text → LLM with tools → text-to-speech
   Command processor: every change is one transaction → append-only events → publish
   Record builder + outcome rules · Delivery outbox · Persisted timers
@@ -42,17 +44,18 @@ More detail: [architecture](docs/architecture.md) · [record and outcomes](docs/
 
 ## Run it locally
 
-Needs Node 22.18+ and a Postgres database (a free Neon one works).
+Needs Python 3.13 with [uv](https://docs.astral.sh/uv/), Node 22 (only to build the UI) and a Postgres database (a free Neon one works).
 
 ```bash
-npm ci
-cp server/.env.example server/.env   # set DATABASE_URL, PUBLIC_ORIGIN, FILE_URL_SECRET, HOOK_SECRET,
-                                     # and DEEPGRAM_API_KEY + GROQ_API_KEY for voice
-npm run build
-npm start                            # http://localhost:8080
+uv sync
+cp .env.example .env     # set DATABASE_URL, PUBLIC_ORIGIN, FILE_URL_SECRET, HOOK_SECRET,
+                         # and DEEPGRAM_API_KEY + GROQ_API_KEY for voice
+npm ci && npm run build -w web
+set -a; . ./.env; set +a
+uv run python -m app     # http://localhost:8080, migrations run at start
 ```
 
-Without provider keys the chat, cards, records and API still work; only calls are refused. Tests (over 1,100, on a throwaway Postgres): `npm test`; lint and types: `npm run lint && npm run typecheck`; browser end-to-end: `npm run e2e`. Deployment is a Render Blueprint (`render.yaml`) that deploys only after CI passes.
+Without provider keys the chat, cards, records and API still work; only calls are refused. Tests (over 1,100, on a throwaway Postgres 18, started automatically if installed locally or via `TEST_DATABASE_URL`): `uv run pytest tests`; lint and types: `uv run ruff check app tests && uv run mypy app`; UI tests: `npm test`. Deployment is a Render Blueprint (`render.yaml`, Docker) that deploys only after CI passes.
 
 ## Known limitations
 
@@ -60,6 +63,7 @@ Without provider keys the chat, cards, records and API still work; only calls ar
 - **English only**; no Hindi or other Indian languages yet.
 - **One call at a time** (free-tier LLM rate limit), and the free server sleeps when idle, so a first call after a quiet period can start slowly.
 - **A restart ends a live call**; the customer taps Call again and it resumes from the saved state.
+- **No browser end-to-end tests** after the move to Python: the old Playwright specs scripted the TypeScript server's fakes in-process and were dropped. The API, both sockets and a real server process are covered by the Python tests.
 - **Model behaviour is the least-tested part**: tool handling and guards are tested with scripted models, but what the real model says is only checked by hand.
 - **Cost and latency numbers are not yet measured** on the deployed system ([how they will be](docs/performance.md)).
 

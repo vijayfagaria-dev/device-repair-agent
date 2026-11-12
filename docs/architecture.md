@@ -5,7 +5,7 @@ Browser (React, the starter UI, same origin)
   ├─ WS /call  : mic PCM16 16 kHz in, agent PCM16 24 kHz + live transcript lines out
   └─ WS /chat  : cards, messages, record out; answers, Stop, latency samples in
         │
-Node 22 server (Fastify, one process, Render free web service)
+Python 3.13 server (FastAPI + uvicorn, one process, Render free web service)
   ├─ Call engine   STT stream → turn detection → LLM (tools) → sentence chunks → TTS → audio frames
   ├─ Command processor  every state change is one command: row lock → transaction → events → publish
   ├─ Chat planner  idempotent reconciler: decides which card is open, from state alone

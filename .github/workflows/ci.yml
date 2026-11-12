@@ -13,26 +13,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  checks:
-    name: Lint, typecheck, test, build
+  python:
+    name: Lint, typecheck, test (Python)
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     # Throwaway test database (D21), the same major version as Neon (18). Tests never touch Neon.
     services:
       postgres:
         image: postgres:18
         env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 2s
-          --health-timeout 5s
-          --health-retries 30
-    env:
       # Not a secret: a disposable database that exists only for this job.
       TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+        with:
+          python-version: "3.13"
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: uv run ruff check app tests
+      - run: uv run ruff format --check app tests
+      - run: uv run mypy app
+      # Enforces the domain coverage threshold (P2 gate: >= 90% branches in app/domain).
+      - run: uv run pytest tests -q --cov=app/domain --cov-branch --cov-fail-under=90
+
+  web:
+    name: Web UI (test, build, bundle secrets)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -41,41 +49,18 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
-      - run: npm run typecheck
-      # Runs every test and enforces the domain coverage threshold (P2 gate: ≥ 90% branches in server/src/domain).
-      - run: npm run test:coverage
-      - run: npm run build
+      - run: npm test
+      - run: npm run build -w web
       # MH6: no key, token, connection string or secret variable name in what the browser downloads (P9-T05).
       - run: scripts/check-bundle-secrets.sh web/dist
 
-  e2e:
-    name: Browser E2E (Playwright, Chromium, fake providers)
+  docker:
+    name: Docker image builds
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 2s
-          --health-timeout 5s
-          --health-retries 30
-    env:
-      TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      # Builds shared, web and server first (the E2E backend runs the compiled server and serves web/dist).
-      - run: npm run e2e
+      - run: docker build -t voice-chat-agent .
 
   secrets:
     name: Secret scan (gitleaks)
